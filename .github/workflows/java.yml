@@ -136,13 +136,19 @@ jobs:
           basic=$(printf '%s:%s' "$GITHUB_ACTOR" "$GITHUB_TOKEN" | base64 -w0)
           echo "::add-mask::$basic"
           code=$(curl --silent --output /dev/null --write-out '%{http_code}' --header @<(printf 'Authorization: Basic %s\n' "$basic") "$pom") || code=000
-          if [ "$code" = 200 ]; then
-            echo "::notice::com.voplica:voplica-api:$VERSION is already on GitHub Packages"
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "GitHub Packages answers $code for $pom: com.voplica:voplica-api:$VERSION is published now"
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
+          # GitHub Packages answers 200, or a 302 redirect to the stored file, for a version that exists and 404 for one
+          # that does not; any other answer leaves the decision to the publish itself (a 409 there means it exists).
+          case "$code" in
+            2[0-9][0-9]|3[0-9][0-9])
+              echo "::notice::com.voplica:voplica-api:$VERSION is already on GitHub Packages (HTTP $code)"
+              echo "present=true" >> "$GITHUB_OUTPUT" ;;
+            404)
+              echo "GitHub Packages answers 404 for $pom: com.voplica:voplica-api:$VERSION is published now"
+              echo "present=false" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::warning::GitHub Packages answers $code for $pom; the publish decides"
+              echo "present=false" >> "$GITHUB_OUTPUT" ;;
+          esac
       # One Gradle run builds the jars once for both: the staged layout (the Maven Central bundle's, publish-central)
       # and GitHub Packages get the same files.
       - name: Build, stage the Maven layout and publish it to GitHub Packages
