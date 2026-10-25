@@ -191,9 +191,10 @@ jobs:
           services="$(java clients/java/src/test/java/com/voplica/client/DeclaredServices.java proto)"
           mvn --batch-mode --no-transfer-progress --settings "$smoke/settings.xml" --file "$smoke/pom.xml" \
             -Dvoplica.version="$version" compile dependency:build-classpath -Dmdep.outputFile="$smoke/classpath.txt"
-          # The jar came from GitHub Packages (the repository id "github" of smoke/pom.xml), not from Maven Central.
+          # The jar came from GitHub Packages (the repository id "github" of smoke/pom.xml), not from Maven Central. Maven 4 records
+          # the id with a hash suffix ("github-<sha1>") for a repository that carries credentials; both forms are the same origin.
           origin="$HOME/.m2/repository/com/voplica/voplica-api/$version/_remote.repositories"
-          if ! grep -qxF "voplica-api-$version.jar>github=" "$origin"; then
+          if ! grep -qE "^voplica-api-$version\.jar>github(-[0-9a-f]+)?=$" "$origin"; then
             echo "::error::Maven did not resolve voplica-api-$version.jar from GitHub Packages:"
             cat "$origin"
             exit 1
