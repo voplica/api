@@ -140,7 +140,8 @@ jobs:
           # that does not; any other answer leaves the decision to the publish itself (a 409 there means it exists).
           case "$code" in
             2[0-9][0-9]|3[0-9][0-9])
-              echo "::notice::com.voplica:voplica-api:$VERSION is already on GitHub Packages (HTTP $code)"
+              echo "GitHub Packages answers $code for $pom"
+              echo "::notice::com.voplica:voplica-api:$VERSION is already on GitHub Packages"
               echo "present=true" >> "$GITHUB_OUTPUT" ;;
             404)
               echo "GitHub Packages answers 404 for $pom: com.voplica:voplica-api:$VERSION is published now"

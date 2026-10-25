@@ -262,6 +262,9 @@ class WorkflowTest {
     void aVersionAlreadyOnARegistryIsANotice() {
         List<String> github = job("publish-github");
         assertTrue(github.contains("echo \"::notice::com.voplica:voplica-api:$VERSION is already on GitHub Packages\""));
+        assertTrue(github.contains("2[0-9][0-9]|3[0-9][0-9])"),
+                "a 2xx or a 3xx (the registry redirects to the stored file) means the version is present");
+        assertTrue(github.contains("404)"), "only a 404 means the version is absent");
         assertTrue(github.contains("if [ \"$PRESENT\" != true ]; then"), "the GitHub Packages publish ignores a present version");
         List<String> central = job("publish-central");
         assertTrue(central.contains("run: scripts/central-portal.sh published \"$VERSION\""), "no check for a version on Maven Central");
