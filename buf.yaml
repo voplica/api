@@ -1,0 +1,22 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - FILE_LOWER_SNAKE_CASE
+    - STANDARD
+  except:
+    - ENUM_VALUE_PREFIX
+    - FIELD_NOT_REQUIRED
+    - IMPORT_NO_PUBLIC
+    - PACKAGE_NO_IMPORT_CYCLE
+    - PACKAGE_VERSION_SUFFIX
+    - RPC_REQUEST_RESPONSE_UNIQUE
+  enum_zero_value_suffix: _UNSPECIFIED
+#  allow_comment_ignores: true
+breaking:
+  use:
+    - FILE
+  except:
+    - EXTENSION_NO_DELETE
+    - FIELD_SAME_DEFAULT

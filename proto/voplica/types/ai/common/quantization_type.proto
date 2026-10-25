@@ -1,0 +1,51 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.common";
+option go_package = "voplica.com/types/ai/common";
+option csharp_namespace = "Voplica.Types.Ai.Common";
+
+enum QuantizationType {
+  QUANTIZATION_TYPE_UNSPECIFIED = 0;
+  QUANT_NONE = 1; // no quantization
+  QUANT_INT8 = 2; // standard 8-bit integer quantization
+  QUANT_INT4 = 3; // generic 4-bit quantization
+  QUANT_UINT8 = 4; // unsigned 8-bit
+  QUANT_Q4_0 = 5; // q4_0 style
+  QUANT_Q4_1 = 6; // q4_1 style
+  QUANT_Q5_0 = 7;
+  QUANT_Q5_1 = 8;
+  QUANT_NF4 = 9; // nf4 / normal float 4
+  QUANT_Q4F16 = 10; // q4f16 style (4-bit with f16 scale)
+  QUANT_GPTQ = 11; // GPTQ family
+  QUANT_AWQ = 12; // AWQ family
+  QUANT_BNB = 13; // bitsandbytes formats (bnb)
+  QUANT_FP8 = 14; // fp8-like quant (emerging)
+  // Half-precision formats
+  QUANT_FP16 = 15; // standard 16-bit floating point
+  QUANT_BF16 = 16; // bfloat16 (brain floating point)
+  // GGUF k-quants and modern formats (learned by model files verification)
+  QUANT_Q2_K = 17;
+  QUANT_Q3_K_S = 18;
+  QUANT_Q3_K_M = 19;
+  QUANT_Q3_K_L = 20;
+  QUANT_Q4_K_S = 21;
+  QUANT_Q4_K_M = 22;
+  QUANT_Q5_K_S = 23;
+  QUANT_Q5_K_M = 24;
+  QUANT_Q6_K = 25;
+  QUANT_Q8_0 = 26;
+  QUANT_FP4 = 27; // 4-bit float (e.g. fp4_e2m1)
+  QUANT_SVDQ_INT4 = 28; // Nunchaku / SVDQuant int4
+  QUANT_SVDQ_FP4 = 29; // Nunchaku / SVDQuant fp4
+  QUANT_FP8_SCALED = 30; // ComfyUI comfy_quant / legacy scaled-fp8: fp8 weights + per-layer scales
+  // ComfyUI comfy_quant nvfp4: e2m1 nibble pairs packed into UINT8, fp8 per-block scales
+  // (group_size 16) and one f32 global scale. Dequantised to bf16 at load.
+  QUANT_NVFP4 = 31;
+}

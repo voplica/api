@@ -1,0 +1,44 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.workflow.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.workflow.common";
+option go_package = "voplica.com/types/workflow/common";
+option csharp_namespace = "Voplica.Types.Workflow.Common";
+import "voplica/types/base/asset_type.proto";
+
+message WorkflowContentRegistration {
+  // Configuration for automated FileInfo registration.
+  // When not provided - it means disabled.
+  // If provided it will lookup at output of the Step and recursively start searching for any `FileInfo` produced
+  // in the output. For any found FileInfo it will get `id` of the file and use it to assemble GeneratedAsset for
+  // the user.
+  // Users can easily post Generated Assets or search all Generated Assets in their cabinet.
+  optional WorkflowContentAutoRegistration auto_registration = 1;
+  // Sometimes a Step may produce a simple file id String, and not a complete `FileInfo`.
+  // In such cases, we should manually provide paths to those file ids that should be registered.
+  repeated WorkflowContentPathRegistration path_registrations = 2;
+}
+
+message WorkflowContentAutoRegistration {
+  // Explicit asset type for the files found via automatic FileInfo lookup.
+  // If not set, the system infers the asset types from the source files
+  // (e.g., image files → IMAGE_ASSET, video files → VIDEO_ASSET).
+  optional voplica.types.base.AssetType asset_type = 1;
+}
+
+message WorkflowContentPathRegistration {
+  // Path example: `foo.bar.my_file_id`
+  // If the provided path has any arrays in-between - it simply means that we are referencing multiple file ids
+  // and each file id will be treated as a separate Asset
+  string file_id_path = 1;
+  // Explicit asset type for the content.
+  // If not set, the system infers the asset type from the source file
+  // (e.g., image file → IMAGE_ASSET, video file → VIDEO_ASSET).
+  optional voplica.types.base.AssetType asset_type = 2;
+}

@@ -1,0 +1,272 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.ai.model;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.ai.model";
+option go_package = "voplica.com/api/ai/model";
+option csharp_namespace = "Voplica.Api.Ai.Model";
+import "voplica/auth.proto";
+import "voplica/types/ai/model/model.proto";
+import "voplica/types/ai/common/model_type.proto";
+import "voplica/types/ai/common/model_family_type.proto";
+import "voplica/types/ai/common/subject_category.proto";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/publish_status.proto";
+import "voplica/types/base/file_type.proto";
+import "voplica/types/base/likeness_category.proto";
+import "voplica/types/base/likeness_disclosure.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/subscription/studio_subscription_type.proto";
+import "google/protobuf/empty.proto";
+
+message CreateModelRequest {
+  // Model name
+  string name = 1;
+  // Model visibility type. All models in the same inherit this visibility type.
+  voplica.types.base.VisibilityType visibility = 2;
+  // If enabled, models in this by default will be set for revenue sharing (unless explicitly disabled per model)
+  bool revenue_sharing_preferred = 3;
+  // Model type of the included models is inferred from the GenModelTypeMetadata
+  voplica.types.ai.model.GenModelTypeMetadata model_type_metadata = 4;
+  // Category of the included models
+  voplica.types.ai.common.SubjectCategory category = 5;
+  // Optional description of the model
+  string description = 6;
+  // Model is intended to produce NSFW content. If `true` then `usage_for_nsfw_allowed` should be `true` as well.
+  bool nsfw = 7;
+  // `true` means this model is allowed to be used for NSFW. `false` means this model should not be used for NSFW content.
+  // This must always be `false` if the content is based on the minor likeness.
+  bool usage_for_nsfw_allowed = 8;
+  // If the dataset is of a likeness of a real person or copyright non-free content then
+  // the permission should be granted explicitly.
+  voplica.types.base.LikenessCategory based_on_likeness_category = 9;
+  // Verification for likeness granted permission
+  voplica.types.base.LikenessGrantedPermissionVerification likeness_granted_permission_verification = 10;
+  // Absent = the platform default (true), so an older studio build never silently opts out.
+  optional bool auto_publish = 11;
+}
+
+message CreateModelResponse {
+  string model_id = 1;
+}
+
+message GetModelRequest {
+  oneof attribute {
+    string id = 1;
+    string idempotency_key = 2;
+  }
+  ModelFieldsFetchingOptions fields_fetching_options = 3;
+}
+
+message ModelFieldsFetchingOptions {
+  // If provided, the found file variant groups will be returned for the default preview asset
+  optional voplica.types.file.FilesRetriever default_preview_retriever = 1;
+}
+
+message GetModelResponse {
+  voplica.types.ai.model.GenModel model = 1;
+}
+
+message GetModelLikenessDisclosureRequest {
+  string model_id = 1;
+}
+
+message GetModelLikenessDisclosureResponse {
+  voplica.types.base.LikenessDisclosure likeness_disclosure = 1;
+}
+
+message UpdateModelLikenessDisclosureRequest {
+  string model_id = 1;
+  // The category this model's subject falls under. Omitted = unchanged.
+  optional voplica.types.base.LikenessCategory based_on_likeness_category = 2;
+  // The proof, in the shape the create form and the import wizard already build. Omitted =
+  // unchanged. A `permission_granted` strategy REPLACES the stored identification and the stored
+  // document asset ids wholesale (it is a declaration, not a patch): sending it with an empty
+  // `obtained_permission_asset_ids` removes every document.
+  optional voplica.types.base.LikenessGrantedPermissionVerification likeness_granted_permission_verification = 3;
+}
+
+message UpdateModelLikenessDisclosureResponse {
+  voplica.types.base.LikenessDisclosure likeness_disclosure = 1;
+}
+
+message UpdateModelRequest {
+  string model_id = 1;
+  optional string model_name = 2;
+  optional voplica.types.base.VisibilityType visibility = 3;
+  // Model type of the included models is inferred from the GenModelTypeMetadata
+  optional voplica.types.ai.model.GenModelTypeMetadata model_type_metadata = 4;
+  optional voplica.types.ai.common.SubjectCategory category = 5;
+  optional bool revenue_sharing_preferred = 6;
+  optional string description = 7;
+  // The owner may set the flag either way (`true` or `false`).
+  optional bool nsfw = 8;
+  optional bool usage_for_nsfw_allowed = 9;
+  optional ModelVariantSelectionStrategy default_model_variant = 10;
+  // Patch semantics like every other field here; owner-scoped like every other field here.
+  optional bool auto_publish = 11;
+}
+
+message ModelVariantSelectionStrategy {
+  oneof strategy {
+    string use_variant_id = 1;
+    google.protobuf.Empty use_latest_variant = 2;
+  }
+}
+
+message UpdateModelResponse {
+  voplica.types.ai.model.GenModel model = 1;
+}
+
+message DeleteModelRequest {
+  string model_id = 1;
+}
+
+message DeleteModelResponse {
+}
+
+message ListModelsRequest {
+  optional ListModelsFilters filters = 1;
+  // Max amount of elements per page
+  int64 limit = 2;
+  // How to sort results
+  ListModelsSorting sort = 3;
+  // Extra options for fields fetching
+  ModelFieldsFetchingOptions fields_fetching_options = 4;
+  // to continue pagination use `next_token` with `before_cursor = false` to fetch the next page or
+  // `prev_token` with `before_cursor = true` to fetch the previous page.
+  optional string cursor = 10;
+  // Used only with `cursor`. If `false` it means fetch data after cursor. If `true` it means fetch data before cursor.
+  bool before = 11;
+  // Check limit + 1 to know if there is more data available
+  // By default is is `false`. Meaning that `more_available` flag won't be returned.
+  // In this case, the only way to verify that there is any data available is to fetch the next page.
+  // Generally this should not be used for infinite scrolls, but can be used if we have buttons like `next`, `previous`.
+  bool check_more_available = 12;
+}
+
+message ListModelsFilters {
+  optional string owner_id = 1;
+  optional voplica.types.base.FileType output_file_type = 2;
+  optional voplica.types.ai.common.ModelFamily model_family = 3;
+  optional voplica.types.ai.common.ModelType model_type = 4;
+  optional voplica.types.base.VisibilityType visibility = 5;
+  // Returns models that don't require any subscriptions OR that are compatible with the provided subscription
+  optional voplica.types.subscription.StudioSubscriptionType compatible_with_subscription = 6;
+  optional voplica.types.ai.common.SubjectCategory category = 7;
+  // `true` means to return NSFW models only.
+  // `false` means to exclude NSFW models.
+  // unset means to return both NSFW and SFW models.
+  optional bool nsfw = 8;
+  // `true` means to return only those models, that are allowed to be used for NSFW content.
+  // `false` means to return both that are allowed or not allowed to be used for NSFW content.
+  bool only_nsfw_allowed_models = 9;
+  // `true` means to returns models with marked with the flag `base_model = true` only.
+  // `false` means any models.
+  bool base_models_only = 10;
+  optional voplica.types.base.PublishStatus status = 11;
+  // `true` means to returns models with marked with the flag `has_published_valid_model_variants = true` only.
+  bool only_with_verified_model_variants = 12;
+  // `true` means to returns models with marked with the flag `has_published_inference_enabled_variant = true` only.
+  bool only_with_enabled_inference = 13;
+  // `true` means to returns models with marked with the flag `has_published_training_enabled_variant = true` only.
+  bool only_with_enabled_training = 14;
+  // Case-insensitive model NAME substring search ('%term%'), composed with every other filter above.
+  // Server-side guards: blank after trim = no filter; 1 char after trim = INVALID_ARGUMENT (min 2 chars);
+  // capped at 100 chars. When set, results are ordered by created_at (keyset) regardless of the
+  // requested trending/last-variant sort key — mirrors the Voices/Characters `query` relation semantics.
+  optional string query = 15;
+}
+
+enum ModelSortKey {
+  MODEL_SORT_KEY_UNSPECIFIED = 0;
+  CREATED_AT = 1;
+  LAST_MODEL_VARIANT_CREATED = 2;
+  TRENDING_SCORE = 3;
+}
+
+message ListModelsSorting {
+  ModelSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListModelsResponse {
+  repeated voplica.types.ai.model.GenModel models = 1;
+  // Token to pass in the next query's Pagination directive to go to the next page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  // If it's missing the last used cursor is essentially the `next_token`
+  optional string next_token = 2;
+  // Token to pass in the next query's Pagination directive to go to the previous page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  // If it's missing the last used cursor is essentially the `prev_token`
+  optional string prev_token = 3;
+  // Returns if there is more data available (i.e. checks `limit + 1`).
+  // Returned only if `check_more_available` is set to `true`
+  optional bool more_available = 4;
+}
+
+message GetModelMetadataRequest {
+  string model_id = 1;
+}
+
+message GetModelMetadataResponse {
+  voplica.types.ai.model.GenModelMetadata model_metadata = 1;
+}
+
+service ModelService {
+  rpc CreateModel (CreateModelRequest) returns (CreateModelResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetModel (GetModelRequest) returns (GetModelResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Get model likeness disclosure by Id
+  rpc GetModelLikenessDisclosure (GetModelLikenessDisclosureRequest) returns (GetModelLikenessDisclosureResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelMetadata (GetModelMetadataRequest) returns (GetModelMetadataResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateModel (UpdateModelRequest) returns (UpdateModelResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateModelLikenessDisclosure (UpdateModelLikenessDisclosureRequest) returns (UpdateModelLikenessDisclosureResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Deletes Model, including all attached Model Variants
+  rpc DeleteModel (DeleteModelRequest) returns (DeleteModelResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListModels (ListModelsRequest) returns (ListModelsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+}

@@ -1,0 +1,77 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.workflow;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.workflow";
+option go_package = "voplica.com/api/workflow";
+option csharp_namespace = "Voplica.Api.Workflow";
+import "voplica/auth.proto";
+import "voplica/types/workflow/value_spec.proto";
+import "voplica/types/base/enum_spec.proto";
+
+message GetMessagesSpecRequest {
+}
+
+message GetMessagesSpecResponse {
+  map<string, voplica.types.workflow.WorkflowMapSchema> messages_spec = 1;
+}
+
+message GetEnumsSpecRequest {
+}
+
+message GetEnumsSpecResponse {
+  map<string, voplica.types.base.EnumSpec> enums_spec = 1;
+}
+
+message GetMessageSpecRequest {
+  string proto_type_url = 1;
+}
+
+message GetMessageSpecResponse {
+  voplica.types.workflow.WorkflowMapSchema message_spec = 1;
+  map<string, voplica.types.workflow.WorkflowMapSchema> nested_messages_specs = 2;
+}
+
+message GetEnumSpecRequest {
+  string proto_type_url = 1;
+}
+
+message GetEnumSpecResponse {
+  voplica.types.base.EnumSpec enum_spec = 1;
+}
+
+service TypesSpecService {
+  // Get all available Message specifications
+  rpc GetMessagesSpec (GetMessagesSpecRequest) returns (GetMessagesSpecResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Get all available Enum specifications
+  rpc GetEnumsSpec (GetEnumsSpecRequest) returns (GetEnumsSpecResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Get Message specification (with all nested types definitions) by proto_type_url
+  rpc GetMessageSpec (GetMessageSpecRequest) returns (GetMessageSpecResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Get Enum specification by proto_type_url
+  rpc GetEnumSpec (GetEnumSpecRequest) returns (GetEnumSpecResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+}

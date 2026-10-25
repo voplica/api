@@ -1,0 +1,57 @@
+# voplica-api, the Python client of the Voplica API: generated from ../../proto by scripts/generate.py (which also
+# copies ../../VERSION and ../../LICENSE here), built and published by .github/workflows/python.yml.
+[build-system]
+requires = ["setuptools==83.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "voplica-api"
+dynamic = ["version"]
+description = "The Voplica API for Python: the messages, enums and services of its public protobuf definitions."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Voplica" }]
+keywords = ["voplica", "api", "protobuf", "grpc"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
+# The runtimes the generated code runs on (tests/test_packaging.py holds them to it): protobuf's cross-version
+# guarantee runs gencode of major V on runtimes of majors V and V+1 and never on an older runtime than the gencode
+# (6.31.1), which the messages check when they load; the floor is raised from the gencode's to 6.33.5, the first
+# runtime without CVE-2026-0994 (GHSA-7gcm-g887-7qv7, json_format's recursion limit bypassed by nested Any). The
+# *_pb2_grpc modules refuse a grpcio older than the generator's.
+dependencies = [
+    "protobuf>=6.33.5,<8",
+    "grpcio>=1.80.0",
+]
+
+[project.urls]
+Homepage = "https://docs.voplica.com/"
+Documentation = "https://docs.voplica.com/clients/"
+Source = "https://github.com/voplica/api"
+Changelog = "https://github.com/voplica/api/blob/main/CHANGELOG.md"
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+# voplica/ and its directories are namespace packages, as the generator writes them (no __init__.py).
+[tool.setuptools.packages.find]
+include = ["voplica", "voplica.*"]
+exclude = ["*.__pycache__", "*.__pycache__.*"]
+namespaces = true
+
+# PEP 561: the stubs and py.typed ship with the modules (setuptools 69 or later does so by default too).
+[tool.setuptools.package-data]
+"*" = ["*.pyi", "py.typed"]

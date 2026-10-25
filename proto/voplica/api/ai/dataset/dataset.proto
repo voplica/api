@@ -1,0 +1,418 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.ai.dataset;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.ai.dataset";
+option go_package = "voplica.com/api/ai/dataset";
+option csharp_namespace = "Voplica.Api.Ai.Dataset";
+import "voplica/auth.proto";
+import "voplica/types/ai/dataset/dataset.proto";
+import "voplica/types/ai/common/subject_category.proto";
+import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/asset_type.proto";
+import "voplica/types/base/likeness_category.proto";
+import "voplica/types/base/likeness_disclosure.proto";
+import "voplica/types/file/files.proto";
+
+message CreateDatasetRequest {
+  string name = 1;
+  // Asset type of the assets that can be attached to the dataset. Immutable after creation.
+  voplica.types.base.AssetType asset_type = 2;
+  optional string description = 3;
+  // If `false` - only the owner can see or use the dataset.
+  // If `true` - anyone can use the dataset to train their models. The dataset is searchable and
+  //   exposes basic info and previews. Files can only be downloaded when `download_allowed` is `true`.
+  voplica.types.base.VisibilityType search_and_use_visibility_type = 4;
+  // If `true` anyone who can use the dataset will also be able to download dataset files.
+  // If `false` nobody (except the owner) can download dataset files.
+  bool download_allowed = 5;
+  // When enabled, the dataset becomes eligible for revenue sharing. The owner earns part of the
+  // commission Voplica earns from model trainings that used the dataset. Trainers are charged
+  // the same regardless of revenue-share status.
+  bool revenue_share = 6;
+  voplica.types.ai.common.SubjectCategory best_for_category = 7;
+  voplica.types.base.MPARating mpa_rating = 8;
+  // Required when the dataset contains a likeness of a real person or copyright-protected content.
+  voplica.types.base.LikenessCategory based_on_likeness_category = 9;
+  voplica.types.base.LikenessGrantedPermissionVerification likeness_granted_permission_verification = 10;
+}
+
+message CreateDatasetResponse {
+  string dataset_id = 1;
+}
+
+message GetDatasetRequest {
+  string dataset_id = 1;
+  DatasetFieldsFetchingOptions fields_fetching_options = 2;
+}
+
+message DatasetFieldsFetchingOptions {
+  // If provided, returns the file variant groups for the dataset's default preview asset.
+  optional voplica.types.file.FilesRetriever default_preview_retriever = 1;
+}
+
+message GetDatasetResponse {
+  voplica.types.ai.dataset.Dataset dataset = 1;
+}
+
+message GetDatasetMetadataRequest {
+  string dataset_id = 1;
+}
+
+message GetDatasetMetadataResponse {
+  voplica.types.ai.dataset.DatasetMetadata dataset_metadata = 1;
+}
+
+message GetDatasetLikenessDisclosureRequest {
+  string dataset_id = 1;
+}
+
+message GetDatasetLikenessDisclosureResponse {
+  voplica.types.base.LikenessDisclosure likeness_disclosure = 1;
+}
+
+message UpdateDatasetRequest {
+  string dataset_id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional voplica.types.base.VisibilityType visibility = 4;
+  optional bool download_allowed = 5;
+  optional bool revenue_share = 6;
+  optional voplica.types.ai.common.SubjectCategory best_for_category = 7;
+  optional voplica.types.file.AssetSelectionStrategy default_preview = 8;
+  // The owner may raise or lower the rating; UNRECOGNIZED is refused; an explicit MPA_RATING_UNSPECIFIED on an
+  // already-RATED dataset is refused too (a no-op on an unrated one).
+  optional voplica.types.base.MPARating mpa_rating = 9;
+}
+
+message UpdateDatasetResponse {
+  voplica.types.ai.dataset.Dataset dataset = 1;
+}
+
+message DeleteDatasetRequest {
+  string dataset_id = 1;
+}
+
+message DeleteDatasetResponse {
+}
+
+message AttachAssetToDatasetRequest {
+  string dataset_id = 1;
+  string asset_id = 2;
+  // Optional per-asset hint that feeds AUTO-CAPTION generation (e.g. "John, a 30yo man with
+  // brown hair"). It is NOT itself a training caption and does NOT affect the visual
+  // `source_item_fingerprint` or preparation reuse - training captions live in the caption
+  // layer (used when auto-generating item captions). Leave empty to attach without a hint.
+  string auto_caption_hint = 3;
+}
+
+message AttachAssetToDatasetResponse {
+}
+
+message UpdateDatasetAssetAutoCaptionHintRequest {
+  string dataset_id = 1;
+  string asset_id = 2;
+  // New auto-caption hint. Empty clears any existing hint. This only influences future
+  // auto-caption generation; it does NOT change the `source_item_fingerprint` and never
+  // invalidates prepared visual artifacts.
+  string auto_caption_hint = 3;
+}
+
+message UpdateDatasetAssetAutoCaptionHintResponse {
+}
+
+message DetachAssetFromDatasetRequest {
+  string dataset_id = 1;
+  string asset_id = 2;
+}
+
+message DetachAssetFromDatasetResponse {
+}
+
+message AddDatasetPreviewAssetRequest {
+  string dataset_id = 1;
+  string preview_asset_id = 2;
+}
+
+message AddDatasetPreviewAssetResponse {
+  string created_asset_id = 1;
+}
+
+message DeleteDatasetPreviewAssetRequest {
+  string dataset_id = 1;
+  string preview_asset_id = 2;
+}
+
+message DeleteDatasetPreviewAssetResponse {
+}
+
+message ListDatasetsRequest {
+  optional ListDatasetsFilters filters = 1;
+  int64 limit = 2;
+  ListDatasetsSorting sort = 3;
+  DatasetFieldsFetchingOptions fields_fetching_options = 4;
+  // To continue pagination use `next_token` with `before = false` to fetch the next page or
+  // `prev_token` with `before = true` to fetch the previous page.
+  optional string cursor = 10;
+  bool before = 11;
+  // When true, the response indicates whether more items are available (uses `limit + 1`).
+  bool check_more_available = 12;
+}
+
+message ListDatasetsFilters {
+  optional string owner_id = 1;
+  optional voplica.types.base.AssetType asset_type = 2;
+  optional voplica.types.base.VisibilityType visibility = 3;
+  optional voplica.types.ai.common.SubjectCategory category = 4;
+  optional MPAFilter mpa_filter = 5;
+  optional bool download_allowed = 6;
+  // Case-insensitive dataset NAME substring search ('%term%'), composed with every other filter above.
+  // Server-side guards: blank after trim = no filter; 1 char after trim = INVALID_ARGUMENT (min 2 chars);
+  // capped at 100 chars. When set, results are ordered by created_at (keyset) regardless of the
+  // requested trending/last-file sort key — mirrors the Voices/Characters `query` relation semantics.
+  optional string query = 7;
+}
+
+message MPAFilter {
+  oneof filter {
+    // Return datasets with this mpa rating or below.
+    voplica.types.base.MPARating max_mpa_rating = 1;
+    // `true` means NSFW only (X or XXX). `false` means SFW only (G/PG/PG_13/R).
+    bool nsfw = 2;
+  }
+}
+
+enum DatasetSortKey {
+  DATASET_SORT_KEY_UNSPECIFIED = 0;
+  CREATED_AT = 1;
+  LAST_FILE_ADDED_AT = 2;
+  TRENDING_SCORE = 3;
+}
+
+message ListDatasetsSorting {
+  DatasetSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListDatasetsResponse {
+  repeated voplica.types.ai.dataset.Dataset datasets = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message ListDatasetAssetsRequest {
+  optional ListDatasetAssetsFilters filters = 1;
+  int64 limit = 2;
+  ListDatasetAssetsSorting sort = 3;
+  DatasetAssetsFetchingOptions fields_fetching_options = 4;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message DatasetAssetsFetchingOptions {
+  optional voplica.types.file.FilesRetriever source_asset_retriever = 1;
+}
+
+enum DatasetAssetSortKey {
+  DATASET_ASSET_SORT_KEY_UNSPECIFIED = 0;
+  ADDED_AT = 1;
+}
+
+message ListDatasetAssetsSorting {
+  DatasetAssetSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListDatasetAssetsFilters {
+  string dataset_id = 1;
+}
+
+message AssetFilesData {
+  voplica.types.file.AssetFileVariantGroups source_asset_groups = 1;
+  // Auto-caption hint stored on the dataset_assets membership row, if any (feeds auto-caption
+  // generation; not a training caption).
+  string auto_caption_hint = 2;
+}
+
+message ListDatasetAssetsResponse {
+  repeated AssetFilesData assets_with_files = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message GetDatasetPreviewAssetsRequest {
+  string dataset_id = 1;
+  // Optionally filter by asset id. If unset, all preview assets are returned.
+  optional string asset_id_filter = 2;
+  optional voplica.types.file.FilesRetriever previews_retriever = 3;
+}
+
+message GetDatasetPreviewAssetsResponse {
+  // 0 to 20 preview assets.
+  // `file_variant_groups` are returned only if requested explicitly.
+  repeated voplica.types.file.AssetFileVariantGroups all_previews = 1;
+}
+
+message GetAttachedAssetsToDatasetRequest {
+  string dataset_id = 1;
+  // Up to 100 asset ids. Ids not part of the dataset are silently dropped from the response.
+  // Useful as a membership check.
+  repeated string asset_ids = 2;
+  DatasetAssetsFetchingOptions fields_fetching_options = 3;
+}
+
+message GetAttachedAssetsToDatasetResponse {
+  repeated AssetFilesData dataset_assets = 1;
+}
+
+message GetMultiDatasetRequest {
+  repeated string ids = 1; // <=100
+}
+
+message GetMultiDatasetResponse {
+  // Visibility-filtered: missing/inaccessible ids are silently omitted.
+  repeated voplica.types.ai.dataset.Dataset datasets = 1;
+}
+
+// Clones a dataset into the CALLER'S space: memberships + auto_caption_hints, subjects +
+// instances (+ embeddings), preparations + items + captions - all as REFERENCES to the same
+// content-addressed files (no file bytes are copied). Process history (runs, snapshots,
+// training lineage) is NOT cloned. Allowed for the owner, or for any user when the dataset
+// is PUBLIC with `download_allowed = true` - this is THE modification path for non-owners
+// (the identity/prepared layers of someone else's dataset are read-only).
+message CloneDatasetRequest {
+  string source_dataset_id = 1;
+  // Name of the new dataset. Defaults to the source name + " (copy)".
+  optional string name = 2;
+}
+
+message CloneDatasetResponse {
+  // The new dataset owned by the caller.
+  string dataset_id = 1;
+  // Populated when the clone runs asynchronously (large datasets); poll the dataset's
+  // metadata for readiness. Empty when the clone completed synchronously.
+  optional string workflow_execution_id = 2;
+}
+
+service DatasetService {
+  rpc CreateDataset (CreateDatasetRequest) returns (CreateDatasetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetDataset (GetDatasetRequest) returns (GetDatasetResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Batch lookup (FE name hydration, e.g. the creator earnings pages). Visibility-filtered
+  // like GetDataset; missing/inaccessible ids are silently omitted rather than erroring.
+  rpc GetMultiDataset (GetMultiDatasetRequest) returns (GetMultiDatasetResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Returns owner-only metadata (preparation lifecycle hints, description, etc.).
+  // Access restricted to the dataset owner.
+  rpc GetDatasetMetadata (GetDatasetMetadataRequest) returns (GetDatasetMetadataResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetDatasetLikenessDisclosure (GetDatasetLikenessDisclosureRequest) returns (GetDatasetLikenessDisclosureResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateDataset (UpdateDatasetRequest) returns (UpdateDatasetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeleteDataset (DeleteDatasetRequest) returns (DeleteDatasetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Clone-to-edit for public datasets (and duplication for owners). See CloneDatasetRequest.
+  rpc CloneDataset (CloneDatasetRequest) returns (CloneDatasetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Attaches a source asset to the dataset.
+  rpc AttachAssetToDataset (AttachAssetToDatasetRequest) returns (AttachAssetToDatasetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Updates the per-asset auto-caption hint on an existing dataset_assets membership row.
+  rpc UpdateDatasetAssetAutoCaptionHint (UpdateDatasetAssetAutoCaptionHintRequest) returns (UpdateDatasetAssetAutoCaptionHintResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DetachAssetFromDataset (DetachAssetFromDatasetRequest) returns (DetachAssetFromDatasetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Works only when the accessing user has dataset download permission (owner OR public + download_allowed).
+  rpc GetAttachedAssetsToDataset (GetAttachedAssetsToDatasetRequest) returns (GetAttachedAssetsToDatasetResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc AddDatasetPreviewAsset (AddDatasetPreviewAssetRequest) returns (AddDatasetPreviewAssetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeleteDatasetPreviewAsset (DeleteDatasetPreviewAssetRequest) returns (DeleteDatasetPreviewAssetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListDatasets (ListDatasetsRequest) returns (ListDatasetsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Lists source dataset assets. Prepared artifacts are exposed via the dataset preparation service.
+  rpc ListDatasetAssets (ListDatasetAssetsRequest) returns (ListDatasetAssetsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetDatasetPreviewAssets (GetDatasetPreviewAssetsRequest) returns (GetDatasetPreviewAssetsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+}

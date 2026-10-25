@@ -1,0 +1,235 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.dataset;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.dataset";
+option go_package = "voplica.com/types/ai/dataset";
+option csharp_namespace = "Voplica.Types.Ai.Dataset";
+import "voplica/types/ai/common/subject_category.proto";
+import "voplica/types/ai/dataset/dataset_preparation.proto";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/image/bounding_box.proto";
+
+// How an instance is currently tied to an identity.
+enum SubjectAssignmentState {
+  SUBJECT_ASSIGNMENT_STATE_UNSPECIFIED = 0;
+  // Detected, not part of any identity yet. Never prepared by PER_SUBJECT targets.
+  SUBJECT_ASSIGNMENT_STATE_UNASSIGNED = 1;
+  // Assigned by clustering or centroid/reference matching. Clustering may move it later.
+  SUBJECT_ASSIGNMENT_STATE_AUTO_ASSIGNED = 2;
+  // Placed by the user. Clustering NEVER moves it; re-runs seed clusters from these.
+  SUBJECT_ASSIGNMENT_STATE_USER_ASSIGNED = 3;
+  // Marked "not a real subject" by the user (reflection, poster, false positive).
+  // Never assigned, never prepared.
+  SUBJECT_ASSIGNMENT_STATE_USER_REJECTED = 4;
+}
+
+enum DatasetSubjectOrigin {
+  DATASET_SUBJECT_ORIGIN_UNSPECIFIED = 0;
+  // Created by the clustering activity of a subject-discovery run ("Subject N").
+  DATASET_SUBJECT_ORIGIN_AUTO_CLUSTERED = 1;
+  // Created by the user (typically with reference exemplars).
+  DATASET_SUBJECT_ORIGIN_USER_CREATED = 2;
+}
+
+// A user-provided exemplar of a subject: a reference image (or crop) plus an optional textual
+// description. References drive matching: for persons they pin WHICH detected face is the
+// user's character (dominant-identity disambiguation in group shots); for objects they are the
+// input to reference-guided detection ("find THIS bracelet in every image").
+message DatasetSubjectReference {
+  voplica.types.file.FileInfo image = 1;
+  // e.g. "gold bracelet with an emerald stone" - helps open-vocabulary detection and captioning.
+  optional string description = 2;
+}
+
+// One dataset-level identity.
+message DatasetSubject {
+  string id = 1;
+  string source_dataset_id = 2;
+  string owner_id = 3;
+  // Auto: "Subject 1", "Subject 2"; user renames ("Anna", "Emerald bracelet").
+  string name = 4;
+  optional string description = 5;
+  // What kind of subject this is. LOCALIZABLE categories only (CHARACTER_GENERIC, OBJECT,
+  // VEHICLE, CLOTHES, ...) - never whole-image categories, never CHARACTER_FACE (a face is a
+  // target FRAMING of a CHARACTER subject, not a subject kind).
+  voplica.types.ai.common.SubjectCategory category = 6;
+  DatasetSubjectOrigin origin = 7;
+  // User-provided exemplars (see `DatasetSubjectReference`). Optional for clustered person
+  // subjects; the defining input for object subjects.
+  repeated DatasetSubjectReference references = 8;
+  reserved 9;
+  string embedding_model_version = 10;
+  reserved 11; // was `cover_subject_instance_id` (string) — replaced by `short_preview` below.
+  uint64 instances_count = 12;
+  // Distinct source assets containing at least one assigned instance.
+  uint64 assets_count = 13;
+  // Seconds since epoch.
+  uint64 created_at = 14;
+  uint64 updated_at = 15;
+  // Subject preview (converted Asset) + which source is currently selected as the avatar (a
+  // member instance's detected crop or one of the subject's reference files). Populated on
+  // List/Get ONLY when a `previews_retriever` is supplied. Mirrors the
+  // GenModel.default_model_variant ShortPreview pattern so subjects list WITH their preview in
+  // one query.
+  optional DatasetSubjectShortPreview short_preview = 16;
+}
+
+message DatasetSubjectShortPreview {
+  optional voplica.types.file.AssetFileVariantGroups default_preview = 1;
+  // Interim fallback while `default_preview` converts (async): the files-SIGNED crop of the cover
+  // instance, so the subject avatar shows instantly and upgrades once the Asset is ready. Set only
+  // for an instance cover (reference covers are rendered from the reference file in the UI).
+  optional voplica.types.file.FileInfo default_preview_source = 4;
+  // Which source the subject preview is taken from. instance_id -> a member instance's detected
+  // crop; reference_id -> a user-selected reference file.
+  oneof preview_source {
+    string instance_id = 2;
+    string reference_id = 3;
+  }
+}
+
+// Where a subject occurs inside an IMAGE asset.
+message ImageSubjectRegion {
+  voplica.types.image.BoundingBox bbox = 1;
+  // Persons only: the face region (drives FACE-framed targets).
+  optional voplica.types.image.BoundingBox face_bbox = 2;
+}
+
+// Where a subject occurs inside a VIDEO asset: one contiguous TRACK of the same subject.
+// The same person re-appearing after a long absence may be a second track (second instance)
+// - assign both to the same `DatasetSubject`.
+message VideoSubjectTrack {
+  uint64 start_ms = 1;
+  uint64 end_ms = 2;
+  // Representative frame of the track (drives previews, embeddings, and FACE framing).
+  uint64 keyframe_ms = 3;
+  voplica.types.image.BoundingBox keyframe_bbox = 4;
+  optional voplica.types.image.BoundingBox keyframe_face_bbox = 5;
+}
+
+// Where a subject occurs inside an AUDIO asset: one contiguous segment (e.g. one diarized
+// speaker turn; the embedding is then a speaker embedding).
+message AudioSubjectSegment {
+  uint64 start_ms = 1;
+  uint64 end_ms = 2;
+  // Channel index for multi-channel sources. 0-based; unset = mixed/mono.
+  optional uint32 channel = 3;
+}
+
+// Where a subject occurs inside a 3D asset. Placeholder shape (like the 3D recipe) - extend
+// when the first 3D worker lands.
+message Model3DSubjectRegion {
+  // Node / submesh path inside the asset (format-specific, e.g. glTF node path).
+  string object_path = 1;
+}
+
+// One detected subject instance in one source asset. Written by workers, curated by the user.
+message DatasetSubjectInstance {
+  string id = 1;
+  string source_dataset_id = 2;
+  string source_asset_id = 3;
+  string source_file_id = 4;
+  // Drift guard: the source item identity this detection was computed on.
+  string source_item_fingerprint = 5;
+  uint32 instance_index = 6;
+  string instance_fingerprint = 7;
+  string analysis_implementation_version = 8;
+  // What kind of instance this is (mirrors the subject's category once assigned; persons are
+  // CHARACTER_GENERIC, objects OBJECT, etc.).
+  voplica.types.ai.common.SubjectCategory category = 9;
+  // WHERE the subject occurs, per source-asset modality. Exactly one arm is set and it must
+  // match the source dataset's `asset_type`.
+  oneof locator {
+    ImageSubjectRegion image_region = 10;
+    VideoSubjectTrack video_track = 11;
+    AudioSubjectSegment audio_segment = 12;
+    Model3DSubjectRegion model_3d_region = 13;
+  }
+  // Representative instance mask, when the detector produced one (images: segmentation mask;
+  // video: keyframe mask). Drives MASK artifacts.
+  optional voplica.types.file.FileInfo mask_file = 14;
+  float detection_confidence = 15;
+  // Usability for recognition/matching (persons: face quality). Unset when not applicable.
+  optional float quality_score = 16;
+  reserved 17;
+  string embedding_model_version = 18;
+  reserved 19; // was `preview_file` (FileInfo) — a preview is always a converted Asset now (`preview`).
+  // Current identity assignment. Empty while UNASSIGNED/USER_REJECTED.
+  optional string subject_id = 20;
+  SubjectAssignmentState assignment_state = 21;
+  // Populated for AUTO_ASSIGNED (cluster / centroid / reference match confidence).
+  optional float assignment_confidence = 22;
+  // Seconds since epoch.
+  uint64 created_at = 23;
+  uint64 updated_at = 24;
+  // The instance's preview: the detected crop (face/object crop; video keyframe; audio snippet)
+  // CONVERTED to an Asset (multiple formats/resolutions). ALWAYS the detected crop for an
+  // instance. Populated on List/Get ONLY when a `previews_retriever` is supplied; the Asset's
+  // `asset_readiness` reflects conversion progress.
+  optional voplica.types.file.AssetFileVariantGroups preview = 25;
+  optional voplica.types.file.FileInfo preview_source = 26;
+}
+
+message DatasetSubjectDiscoveryPolicy {
+  // Skip per-asset analysis; re-run only the clustering activity over stored instances.
+  bool recluster_only = 1;
+  // Instances below this quality are left UNASSIGNED by clustering. 0 = worker default.
+  float min_quality = 2;
+  // Embedding-distance threshold for cluster membership / centroid matching. 0 = worker default.
+  float cluster_distance_threshold = 3;
+  // Default true: USER_ASSIGNED / USER_REJECTED instances are never moved, and clusters are
+  // seeded from user-confirmed members.
+  bool preserve_user_assignments = 4;
+}
+
+enum DatasetSubjectDiscoveryPlanAction {
+  DATASET_SUBJECT_DISCOVERY_PLAN_ACTION_UNSPECIFIED = 0;
+  // Analyze the asset (no instances known yet, or re-analysis forced).
+  DATASET_SUBJECT_DISCOVERY_PLAN_ACTION_ANALYZE = 1;
+  // Instances already exist for the asset's current source_item_fingerprint - reuse them.
+  DATASET_SUBJECT_DISCOVERY_PLAN_ACTION_REUSE_INSTANCES = 2;
+  // Skip (e.g. unsupported media).
+  DATASET_SUBJECT_DISCOVERY_PLAN_ACTION_SKIP = 3;
+}
+
+// Process-lineage record for one subject-discovery execution: per-asset analysis fan-out
+// followed by a single clustering activity. Frozen inputs + outcome counts live here.
+message DatasetSubjectDiscoveryRun {
+  string id = 1;
+  string source_dataset_id = 2;
+  string owner_id = 3;
+  optional string workflow_execution_id = 4;
+  string root_workflow_execution_id = 5;
+  voplica.types.base.JobStatus status = 6;
+  // Seconds since epoch.
+  uint64 started_at = 7;
+  optional uint64 completed_at = 8;
+  optional string message = 9;
+  DatasetSubjectDiscoveryPolicy policy = 10;
+  // Frozen source membership summary (items paged via `ListDatasetSubjectDiscoveryRunItems`).
+  string source_snapshot_fingerprint = 11;
+  uint64 source_items_count = 12;
+  // Outcome counts, finalized at terminal state.
+  uint64 analyzed_items_count = 13;
+  uint64 reused_items_count = 14;
+  uint64 failed_items_count = 15;
+  uint64 instances_count = 16;
+  // Clusters produced or updated by the clustering activity.
+  uint64 subjects_count = 17;
+}
+
+// One frozen work item of a discovery run (paged; authoritative for the worker - it MUST NOT
+// re-query dataset membership).
+message DatasetSubjectDiscoveryRunItem {
+  string discovery_run_id = 1;
+  DatasetPreparationSourceItemSnapshot source_item = 2;
+  DatasetSubjectDiscoveryPlanAction planned_action = 3;
+  optional string message = 4;
+}

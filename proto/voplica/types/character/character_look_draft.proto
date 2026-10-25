@@ -1,0 +1,129 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.character;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.character";
+option go_package = "voplica.com/types/character";
+option csharp_namespace = "Voplica.Types.Character";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/character/character_look.proto";
+
+// How the anchor picture - the identity source every later stage conditions on - was obtained.
+enum CharacterLookDraftAnchorKind {
+  CHARACTER_LOOK_DRAFT_ANCHOR_KIND_UNSPECIFIED = 0;
+  // Generated from a text prompt with any image model (T2I).
+  CHARACTER_LOOK_DRAFT_ANCHOR_KIND_GENERATED = 1;
+  // Chosen from the user's existing content library.
+  CHARACTER_LOOK_DRAFT_ANCHOR_KIND_PICKED = 2;
+  // A single uploaded picture, used as the anchor directly.
+  CHARACTER_LOOK_DRAFT_ANCHOR_KIND_UPLOADED = 3;
+  // SEVERAL uploaded pictures, analyzed and composed into one CUSTOM_REFERENCE sheet which is then
+  // the anchor. Implies the draft's `sheet_type` is CHARACTER_SHEET_TYPE_CUSTOM_REFERENCE.
+  CHARACTER_LOOK_DRAFT_ANCHOR_KIND_CUSTOM_SHEET = 4;
+}
+
+// The wizard's stages, in flow order. Distinct from `CharacterLookAssetType` on purpose: ANCHOR is a
+// stage but never a look asset, and one stage (BODY_SIDE) can approve two assets (BODY_LEFT and
+// BODY_RIGHT). Used to key ITERATION HISTORY, which the anchor also has.
+enum CharacterLookDraftStage {
+  CHARACTER_LOOK_DRAFT_STAGE_UNSPECIFIED = 0;
+  CHARACTER_LOOK_DRAFT_STAGE_ANCHOR = 1;
+  CHARACTER_LOOK_DRAFT_STAGE_BODY_FRONT = 2;
+  CHARACTER_LOOK_DRAFT_STAGE_BODY_BACK = 3;
+  CHARACTER_LOOK_DRAFT_STAGE_BODY_SIDE = 4;
+  CHARACTER_LOOK_DRAFT_STAGE_FACE = 5;
+  CHARACTER_LOOK_DRAFT_STAGE_HALF_BODY = 6;
+}
+
+enum CharacterLookDraftState {
+  CHARACTER_LOOK_DRAFT_STATE_UNSPECIFIED = 0;
+  CHARACTER_LOOK_DRAFT_STATE_IN_PROGRESS = 1;
+  CHARACTER_LOOK_DRAFT_STATE_COMPLETED = 2;
+  CHARACTER_LOOK_DRAFT_STATE_ABANDONED = 3;
+}
+
+// One APPROVED view: the file the user accepted for a given look-asset slot. Keyed by
+// `CharacterLookAssetType` (not by stage) because these files become look assets of exactly that
+// type when the draft is saved - which is what lets the save path attach them without a mapping step.
+message CharacterLookDraftApprovedView {
+  voplica.types.character.CharacterLookAssetType asset_type = 1;
+  voplica.types.file.FileReference file = 2;
+  uint64 approved_at = 3; // epoch millis (platform convention)
+  optional string produced_by_execution_id = 4;
+}
+
+message CharacterLookDraftStageHistory {
+  CharacterLookDraftStage stage = 1;
+  repeated string workflow_execution_ids = 2;
+}
+
+message CharacterLookDraftViewRun {
+  CharacterLookDraftStage stage = 1;
+  voplica.types.character.CharacterLookAssetType asset_type = 2;
+  voplica.types.base.JobStatus status = 3;
+  // The engine execution that produced (or is producing) this slot, owner-scoped readable.
+  string workflow_execution_id = 4;
+  // Present only once `status` is COMPLETED: the generated image, registered under the DRAFT
+  // OWNER's file scope (owner_id + origin_id — the file-registration model).
+  optional voplica.types.file.FileReference file = 5;
+  optional string used_seed = 6;
+  // Present only when `status` is FAILED.
+  optional string error_message = 7;
+  uint64 updated_at = 8; // epoch millis (platform convention)
+  optional string compose_press_id = 9;
+}
+
+// A resumable character-wizard session. Bound to one character, or to none yet.
+message CharacterLookDraft {
+  string id = 1;
+  string owner_id = 2;
+  // The character this draft builds a look for - EMPTY means the draft is CHARACTER-LESS: a
+  // new-character wizard run whose character does not exist yet. Deliberately a plain proto3 string
+  // rather than `optional`: absent and empty are the same state here (the server either knows a
+  // character or does not), so ONE spelling of "no character" is what this whole surface uses -
+  // on this field, on CreateCharacterLookDraftRequest, and on ListCharacterLookDraftsRequest.
+  //
+  // Character-less is a STARTING state, never a resting one: a draft is bound exactly once, by
+  // `BindCharacterLookDraftToCharacter`, and a bound draft can never be re-bound or un-bound. A
+  // draft must be bound before it may reach CHARACTER_LOOK_DRAFT_STATE_COMPLETED, because the
+  // CharacterLook that state records the creation of has nowhere to live otherwise.
+  string character_id = 3;
+  // Set when the draft was started FROM an existing look ("new look for an existing character"):
+  // the anchor is that look's sheet and untouched views may be carried over.
+  optional string source_look_id = 4;
+  // The identity source every later stage conditions on. Absent until stage 1 completes.
+  optional voplica.types.file.FileReference anchor = 5;
+  CharacterLookDraftAnchorKind anchor_kind = 6;
+  // Approved views so far, at most one per asset type. Order is not significant.
+  repeated CharacterLookDraftApprovedView approved_views = 7;
+  // Per-stage iteration history, at most one entry per stage.
+  repeated CharacterLookDraftStageHistory stage_history = 8;
+  // The sheet layout this draft will compose. Absent / UNSPECIFIED (0) reads as
+  // CHARACTER_SHEET_TYPE_DEFAULT, exactly as on CharacterLook - see CharacterSheetType.
+  voplica.types.character.CharacterSheetType sheet_type = 9;
+  CharacterLookDraftState state = 10;
+  uint64 created_at = 11; // epoch millis
+  uint64 updated_at = 12; // epoch millis
+  repeated CharacterLookDraftViewRun view_runs = 13;
+  // The working name of the look this draft is building, persisted so it survives a resume. Absent means the draft
+  // has no name yet (an empty string is stored as absent). A cloned draft is named from the look it came from
+  // ("<look name> (copy)"); patch it through `UpdateCharacterLookDraft.name`.
+  optional string name = 14;
+  optional string anchor_model_id = 15; // any T2I family, the anchor step
+  optional string edit_model_id = 16; // I2I_EDIT families only, every later step
+  // Resolved only when the request carries a previews retriever (20+ = resolved-on-request band,
+  // mirroring CharacterLook.default_preview): the anchor's file variant groups, so a draft list can
+  // render thumbnails without a second round trip per draft.
+  optional voplica.types.file.AssetFileVariantGroups anchor_preview = 20;
+  // Resolved on request (the 20+ band): the name of the character this draft is bound to - set only
+  // when `CharacterLookDraftFieldsFetchingOptions.include_character_name` is true and the draft is
+  // bound to a character (`character_id` set); absent for a character-less draft and absent unless
+  // requested. The caller's own character, so no visibility question.
+  optional string character_name = 21;
+}

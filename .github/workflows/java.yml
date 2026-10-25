@@ -1,0 +1,257 @@
+# The Java client com.voplica:voplica-api (clients/java): built and tested on every pull request that touches it and on
+# dispatch. On every version tag (one per sync, `v<VERSION>`) it is published: to GitHub Packages with the run's own
+# GITHUB_TOKEN, then resolved back from there by Maven and compiled and run against on Java 17, and only then signed
+# with the owner's GPG key and published to Maven Central through the Central Portal, where a version can never be
+# replaced. A version already on a registry is a notice, not a failure. A dispatch or a pull request publishes nothing.
+name: Java
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "clients/java/**"
+      - "proto/**"
+      - "VERSION"
+      - ".github/workflows/java.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # The generators the build runs, the releases build.gradle names (protoc 34.1 generates for protobuf-java 4.34.1;
+  # WorkflowTest compares the two); scripts/install-generators.sh checks each against its sha256 before it runs.
+  PROTOC_VERSION: "34.1"
+  # bin/protoc of the release's protoc-34.1-linux-x86_64.zip
+  PROTOC_SHA256: 3d6aef252f3851bdee5a7e7a2c8c927d4980e014d8ac0f18c8ba2d6f084a0504
+  GRPC_JAVA_VERSION: 1.81.0
+  # protoc-gen-grpc-java-1.81.0-linux-x86_64.exe on Maven Central
+  GRPC_JAVA_SHA256: 4f7596c60a137524b54f2b11d956fa200f3fe97678de1cddd827d10954250f7d
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: clients/java
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Refuse a tag that is not v$(cat VERSION)
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: .
+        run: |
+          version="$(cat VERSION)"
+          if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::VERSION is \"$version\", not X.Y.Z: nothing is published"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::the tag $GITHUB_REF_NAME is not v$version (VERSION): nothing is published"
+            exit 1
+          fi
+      - uses: gradle/actions/wrapper-validation@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+      - name: protoc and protoc-gen-grpc-java, checked against their sha256
+        run: |
+          scripts/install-generators.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      # The tests (src/test) read this workflow, the published protos and what the build made of them.
+      - name: Build and test, and stage the Maven layout
+        run: ./gradlew build publishMavenJavaPublicationToStagingRepository --no-daemon
+      - name: The Maven Central bundle, signed with a throwaway key (a dry run of the release's signing)
+        # scripts/central-bundle.sh imports, signs, verifies and zips here exactly as it does for the release, with a
+        # key made in this step and thrown away; the release signs with the owner's key (publish-central). The key has
+        # the shape that signs with a subkey (a certify-only primary and a signing subkey, as an offline primary or a
+        # smart card has it); a key whose primary signs takes the same path.
+        run: |
+          version="$(cat ../../VERSION)"
+          export GNUPGHOME="$RUNNER_TEMP/throwaway-gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          gpg --batch --pinentry-mode loopback --passphrase throwaway --quick-gen-key "Dry run <dry-run@example.invalid>" ed25519 cert 1d
+          fpr="$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')"
+          gpg --batch --pinentry-mode loopback --passphrase throwaway --quick-add-key "$fpr" ed25519 sign 1d
+          throwaway_key="$(gpg --batch --pinentry-mode loopback --passphrase throwaway --armor --export-secret-keys)"
+          gpgconf --kill gpg-agent
+          unset GNUPGHOME
+          MAVEN_GPG_PRIVATE_KEY="$throwaway_key" MAVEN_GPG_PASSPHRASE=throwaway \
+            scripts/central-bundle.sh build/staging-deploy "$version" "$RUNNER_TEMP/central-bundle.zip"
+
+  publish-github:
+    name: Publish to GitHub Packages
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write   # the run's own token publishes the package linked to this repository (GitHub Packages' documented route)
+    defaults:
+      run:
+        shell: bash
+        working-directory: clients/java
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Refuse a tag that is not v$(cat VERSION)
+        working-directory: .
+        run: |
+          version="$(cat VERSION)"
+          if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::VERSION is \"$version\", not X.Y.Z: nothing is published"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::the tag $GITHUB_REF_NAME is not v$version (VERSION): nothing is published"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+      - name: protoc and protoc-gen-grpc-java, checked against their sha256
+        run: |
+          scripts/install-generators.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Is this version on GitHub Packages already?
+        id: present
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pom="https://maven.pkg.github.com/voplica/api/com/voplica/voplica-api/$VERSION/voplica-api-$VERSION.pom"
+          # Basic credentials of the actor and the run's token, as GitHub documents the Maven registry and as Maven and
+          # Gradle send them; masked, and read by curl from a header file, never from its command line.
+          basic=$(printf '%s:%s' "$GITHUB_ACTOR" "$GITHUB_TOKEN" | base64 -w0)
+          echo "::add-mask::$basic"
+          code=$(curl --silent --output /dev/null --write-out '%{http_code}' --header @<(printf 'Authorization: Basic %s\n' "$basic") "$pom") || code=000
+          if [ "$code" = 200 ]; then
+            echo "::notice::com.voplica:voplica-api:$VERSION is already on GitHub Packages"
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "GitHub Packages answers $code for $pom: com.voplica:voplica-api:$VERSION is published now"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      # One Gradle run builds the jars once for both: the staged layout (the Maven Central bundle's, publish-central)
+      # and GitHub Packages get the same files.
+      - name: Build, stage the Maven layout and publish it to GitHub Packages
+        env:
+          PRESENT: ${{ steps.present.outputs.present }}
+          ORG_GRADLE_PROJECT_GitHubPackagesUsername: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_GitHubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tasks=(publishMavenJavaPublicationToStagingRepository)
+          if [ "$PRESENT" != true ]; then
+            tasks+=(publishMavenJavaPublicationToGitHubPackagesRepository)
+          fi
+          ./gradlew "${tasks[@]}" --no-daemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: voplica-api-maven
+          path: clients/java/build/staging-deploy
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  smoke:
+    name: Resolve it from GitHub Packages and run against it on Java 17
+    needs: publish-github
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17   # the oldest Java the jar is for
+      - name: Compile and run one class against the published version, in an empty Maven project
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="$(cat VERSION)"
+          smoke="$RUNNER_TEMP/smoke"
+          mkdir -p "$smoke/src/main/java/com/voplica/client"
+          cp clients/java/smoke/pom.xml clients/java/smoke/settings.xml "$smoke/"
+          cp clients/java/src/test/java/com/voplica/client/RegistrySmoke.java "$smoke/src/main/java/com/voplica/client/"
+          services="$(java clients/java/src/test/java/com/voplica/client/DeclaredServices.java proto)"
+          mvn --batch-mode --no-transfer-progress --settings "$smoke/settings.xml" --file "$smoke/pom.xml" \
+            -Dvoplica.version="$version" compile dependency:build-classpath -Dmdep.outputFile="$smoke/classpath.txt"
+          # The jar came from GitHub Packages (the repository id "github" of smoke/pom.xml), not from Maven Central.
+          origin="$HOME/.m2/repository/com/voplica/voplica-api/$version/_remote.repositories"
+          if ! grep -qxF "voplica-api-$version.jar>github=" "$origin"; then
+            echo "::error::Maven did not resolve voplica-api-$version.jar from GitHub Packages:"
+            cat "$origin"
+            exit 1
+          fi
+          java -cp "$smoke/target/classes:$(cat "$smoke/classpath.txt")" com.voplica.client.RegistrySmoke "$services" "$version"
+
+  publish-central:
+    name: Publish to Maven Central
+    needs: [publish-github, smoke]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+        working-directory: clients/java
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Refuse a tag that is not v$(cat VERSION)
+        working-directory: .
+        run: |
+          version="$(cat VERSION)"
+          if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::VERSION is \"$version\", not X.Y.Z: nothing is published"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::the tag $GITHUB_REF_NAME is not v$version (VERSION): nothing is published"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v5   # jar, which zips the bundle
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: actions/download-artifact@v8
+        with:
+          name: voplica-api-maven
+          path: ${{ runner.temp }}/staging-deploy
+      - name: Is this version on Maven Central already?
+        id: present
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: scripts/central-portal.sh published "$VERSION"
+      - name: Sign it with the owner's key and bundle it
+        if: steps.present.outputs.present != 'true'
+        env:
+          MAVEN_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: scripts/central-bundle.sh "$RUNNER_TEMP/staging-deploy" "$VERSION" "$RUNNER_TEMP/central-bundle.zip"
+      - name: Upload it to the Central Portal and wait until Maven Central publishes it
+        if: steps.present.outputs.present != 'true'
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: scripts/central-portal.sh upload "$RUNNER_TEMP/central-bundle.zip" "$VERSION"

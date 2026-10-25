@@ -1,0 +1,26 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.base;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.base";
+option go_package = "voplica.com/types/base";
+option csharp_namespace = "Voplica.Types.Base";
+
+// Closed taxonomy of content hazards detected by the platform's media analysis.
+// Free-text findings/reasons are carried alongside (see FileMpaAnalysis); this enum feeds filters.
+enum HazardCategory {
+  HAZARD_CATEGORY_UNSPECIFIED = 0;
+  SEXUAL_CONTENT = 1;
+  MINORS_INVOLVED = 2;
+  VIOLENCE_GORE = 3;
+  EXTREME_DISTURBING = 4;
+  SELF_HARM = 5;
+  HATE = 6;
+  DRUGS = 7;
+  WEAPONS = 8;
+}

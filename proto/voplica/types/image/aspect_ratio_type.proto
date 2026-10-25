@@ -1,0 +1,52 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.image;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.image";
+option go_package = "voplica.com/types/image";
+option csharp_namespace = "Voplica.Types.Image";
+import "voplica/types/image/image_size.proto";
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.EnumValueOptions {
+  optional AspectRatioExtension aspect_ratio_extension = 50002;
+}
+
+message AspectRatioExtension {
+  string name = 1;
+  voplica.types.image.ImageSize image_size = 2;
+}
+
+enum AspectRatioType {
+  ASPECT_RATIO_TYPE_UNSPECIFIED = 0;
+  RATIO_1_1 = 1 [(aspect_ratio_extension) = { image_size: { width: 1, height: 1 }, name: "RATIO_1_1" }];
+  RATIO_9_16 = 2 [(aspect_ratio_extension) = { image_size: { width: 9, height: 16 }, name: "RATIO_9_16" }];
+  RATIO_4_5 = 3 [(aspect_ratio_extension) = { image_size: { width: 4, height: 5 }, name: "RATIO_4_5" }];
+  RATIO_3_4 = 4 [(aspect_ratio_extension) = { image_size: { width: 3, height: 4 }, name: "RATIO_3_4" }];
+  RATIO_3_5 = 5 [(aspect_ratio_extension) = { image_size: { width: 3, height: 5 }, name: "RATIO_3_5" }];
+  RATIO_16_9 = 6 [(aspect_ratio_extension) = { image_size: { width: 16, height: 9 }, name: "RATIO_16_9" }];
+  // Aspect ratios 1/1
+  VARIANT_RATIO_1440_1440 = 100 [(aspect_ratio_extension) = { image_size: { width: 1440, height: 1440 }, name: "RATIO_1440_1440" }];
+  VARIANT_RATIO_1408_1408 = 101 [(aspect_ratio_extension) = { image_size: { width: 1408, height: 1408 }, name: "RATIO_1408_1408" }];
+  VARIANT_RATIO_1024_1024 = 102 [(aspect_ratio_extension) = { image_size: { width: 1024, height: 1024 }, name: "RATIO_1024_1024" }];
+  // Vertical aspect ratios 9/16
+  VARIANT_RATIO_1088_1920 = 200 [(aspect_ratio_extension) = { image_size: { width: 1088, height: 1920 }, name: "RATIO_1088_1920" }];
+  VARIANT_RATIO_1056_1888 = 201 [(aspect_ratio_extension) = { image_size: { width: 1056, height: 1888 }, name: "RATIO_1056_1888" }];
+  VARIANT_RATIO_736_1312 = 202 [(aspect_ratio_extension) = { image_size: { width: 736, height: 1312 }, name: "RATIO_736_1312" }];
+  // Vertical aspect ratios 4/5
+  VARIANT_RATIO_1280_1600 = 300 [(aspect_ratio_extension) = { image_size: { width: 1280, height: 1600 }, name: "RATIO_1280_1600" }];
+  VARIANT_RATIO_1248_1560 = 301 [(aspect_ratio_extension) = { image_size: { width: 1248, height: 1560 }, name: "RATIO_1248_1560" }];
+  VARIANT_RATIO_896_1120 = 302 [(aspect_ratio_extension) = { image_size: { width: 896, height: 1120 }, name: "RATIO_896_1120" }];
+  // Horizontal aspect ratios 16/9
+  VARIANT_RATIO_1920_1088 = 400 [(aspect_ratio_extension) = { image_size: { width: 1920, height: 1088 }, name: "RATIO_1920_1088" }];
+  VARIANT_RATIO_1888_1056 = 401 [(aspect_ratio_extension) = { image_size: { width: 1888, height: 1056 }, name: "RATIO_1888_1056" }];
+  VARIANT_RATIO_1312_736 = 402 [(aspect_ratio_extension) = { image_size: { width: 1312, height: 736 }, name: "RATIO_1312_736" }];
+  // Horizontal aspect ratios 5/4
+  VARIANT_RATIO_1600_1280 = 500 [(aspect_ratio_extension) = { image_size: { width: 1600, height: 1280 }, name: "RATIO_1600_1280" }];
+  VARIANT_RATIO_1560_1248 = 501 [(aspect_ratio_extension) = { image_size: { width: 1560, height: 1248 }, name: "RATIO_1560_1248" }];
+  VARIANT_RATIO_1120_896 = 502 [(aspect_ratio_extension) = { image_size: { width: 1120, height: 896 }, name: "RATIO_1120_896" }];
+}

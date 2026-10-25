@@ -1,0 +1,24 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.base;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.base";
+option go_package = "voplica.com/types/base";
+option csharp_namespace = "Voplica.Types.Base";
+import "voplica/types/base/verification_status.proto";
+import "voplica/types/base/likeness_category.proto";
+
+message LikenessDisclosure {
+  // This status can only be updated by moderators that review provided granted permission documents.
+  // For copyright_free content as well as personal content - this becomes `true` automatically.
+  // For `permission_granted` content - the review is manual and reviewed by moderators.
+  // Attempts to change this status are ignored from non-moderator users.
+  voplica.types.base.VerificationStatus likeness_granted_permission_verification_status = 1;
+  voplica.types.base.LikenessCategory based_on_likeness_category = 2;
+  voplica.types.base.LikenessGrantedPermissionVerification likeness_granted_permission_verification = 3;
+}

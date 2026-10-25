@@ -1,0 +1,735 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.dataset;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.dataset";
+option go_package = "voplica.com/types/ai/dataset";
+option csharp_namespace = "Voplica.Types.Ai.Dataset";
+import "google/protobuf/struct.proto";
+import "voplica/types/ai/common/caption_conflict_strategy.proto";
+import "voplica/types/ai/common/subject_category.proto";
+import "voplica/types/ai/common/model_family_type.proto";
+import "voplica/types/base/asset_type.proto";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/image/aspect_ratio_type.proto";
+import "voplica/types/image/image_size.proto";
+
+// Defines how a preparation run treats artifacts that already exist in the dataset's
+// `DatasetPreparation` for the selected source assets.
+//
+// No-work short-circuit: when the prepared set already contains every expected artifact for
+// every selected source asset, the `REUSE_PREPARED_WHEN_COMPATIBLE` and
+// `FAIL_IF_ANY_ITEM_MISSING` policies complete without starting any workflow.
+// `REPROCESS_ALL_ITEMS` intentionally skips this short-circuit and regenerates everything.
+enum DatasetPreparationReusePolicy {
+  DATASET_PREPARATION_REUSE_POLICY_UNSPECIFIED = 0;
+  // Default policy: prepare only the missing artifacts; keep every existing artifact in the
+  // set untouched (including USER_EDITED/USER_AUTHORED overrides).
+  DATASET_PREPARATION_REUSE_POLICY_REUSE_PREPARED_WHEN_COMPATIBLE = 1;
+  // Regenerate every expected artifact for the selected source assets, replacing existing
+  // AUTO_GENERATED entries (user-authored/edited overrides are preserved). Use this when the
+  // worker implementation or models changed in a way that cannot be expressed by
+  // `implementation_version` alone.
+  DATASET_PREPARATION_REUSE_POLICY_REPROCESS_ALL_ITEMS = 2;
+  // Do not start work if any selected source asset is missing any expected artifact.
+  // Use this to validate a dataset's readiness (for example before training) without paying
+  // for any new preparation.
+  DATASET_PREPARATION_REUSE_POLICY_FAIL_IF_ANY_ITEM_MISSING = 3;
+}
+
+enum PreparedFileKind {
+  PREPARED_FILE_KIND_UNSPECIFIED = 0;
+  // Primary prepared training sample: image, video clip, or audio segment, depending on
+  // the source asset type. Trainers consume one or more samples per item.
+  PREPARED_FILE_KIND_TRAINING_SAMPLE = 1;
+  // Binary or grayscale mask aligned with a training sample. Filesystem-oriented trainers
+  // (e.g. ai-toolkit) consume these directly as their mask inputs.
+  PREPARED_FILE_KIND_MASK = 2;
+  // Alpha image (separate file or RGBA variant of a training sample). NOTE: current
+  // trainers read transparency from the training sample's OWN alpha channel and take no
+  // separate alpha input - this kind exists for compositing/preview pipelines and future
+  // trainers; training materialization MAY ignore it.
+  PREPARED_FILE_KIND_ALPHA = 3;
+  // Machine-readable analysis metadata used to reproduce or refine preparation. Captions
+  // are NOT a file kind - they are first-class item state (`PreparedItemCaption`, one per
+  // text format). Sidecar caption `.txt` files, when a filesystem-oriented trainer needs
+  // them, are generated at training-materialization time from the item's caption of the
+  // selected `caption_format` + trigger words.
+  PREPARED_FILE_KIND_ANALYSIS_METADATA = 4;
+  // Companion audio segment extracted from a video training sample
+  // (`VideoDatasetPreparationRecipe.extract_audio`), time-aligned with the item's clip.
+  // Needed as its own kind because an item carries at most ONE file per kind and the
+  // clip already occupies TRAINING_SAMPLE. Audio-capable video trainers (e.g. LTX
+  // `do_audio`) read the MUXED track inside the clip itself; this extracted companion
+  // exists for audio-only reuse and inspection.
+  PREPARED_FILE_KIND_AUDIO_TRACK = 5;
+}
+
+// Crop policy used by image preparation when fitting a source image into a target.
+enum ImageDatasetCropPolicy {
+  IMAGE_DATASET_CROP_POLICY_UNSPECIFIED = 0;
+  // Keep the selected subject fully visible and extend background generatively if needed.
+  IMAGE_DATASET_CROP_POLICY_PRESERVE_SUBJECT_EXTEND_BACKGROUND = 1;
+  // Keep the selected subject fully visible and pad with plain or generated background.
+  IMAGE_DATASET_CROP_POLICY_PRESERVE_SUBJECT_PAD_BACKGROUND = 2;
+  // Allow background-only cropping and avoid subject cropping where possible.
+  IMAGE_DATASET_CROP_POLICY_CROP_BACKGROUND_ONLY = 3;
+  // Allow subject cropping, for example for face-only crops.
+  IMAGE_DATASET_CROP_POLICY_ALLOW_SUBJECT_CROP = 4;
+}
+
+// Action proposed by `PlanDatasetPreparation` for one selected source asset.
+enum DatasetPreparationPlanAction {
+  DATASET_PREPARATION_PLAN_ACTION_UNSPECIFIED = 0;
+  // Every expected artifact for this source asset already exists in the prepared set; no
+  // work is needed.
+  DATASET_PREPARATION_PLAN_ACTION_REUSE_PREPARED_ITEM = 1;
+  // The source asset is missing at least one expected file or caption (`expected_items`
+  // lists exactly which) and requires preparation work.
+  DATASET_PREPARATION_PLAN_ACTION_PREPARE_ITEM = 2;
+  // The source asset should not be prepared, for example because no target subject was
+  // detected during planning. `message` carries the reason.
+  DATASET_PREPARATION_PLAN_ACTION_SKIP_ITEM = 3;
+  // The request should fail before starting any work, for example because the reuse policy
+  // is `FAIL_IF_ANY_ITEM_MISSING` and this source asset is missing an expected artifact.
+  // `message` carries the reason.
+  DATASET_PREPARATION_PLAN_ACTION_FAIL_ITEM = 4;
+}
+
+// Frozen snapshot of one source asset captured at the start of a preparation run.
+// The snapshot is what the worker actually consumes - the source dataset itself is mutable.
+message DatasetPreparationSourceItemSnapshot {
+  string source_asset_id = 1;
+  string source_file_id = 2;
+  // Stable hash of the source file bytes or source file version.
+  string source_file_fingerprint = 3;
+  string source_item_fingerprint = 4;
+}
+
+// Frozen snapshot of the source-dataset membership one preparation run operated on. Owned by
+// a `DatasetPreparationRun` (process lineage: "what inputs did this run consider"); it is NOT
+// part of a `DatasetPreparationSnapshot`, whose identity is its frozen items. Callers use
+// `source_snapshot_fingerprint` to detect dataset drift between planning and preparing.
+message DatasetPreparationSourceSnapshot {
+  string source_dataset_id = 1;
+  uint64 captured_at = 2;
+  uint64 last_asset_added_at = 3;
+  uint64 assets_count = 4;
+  // Stable hash over the sorted `source_item_fingerprint`s in `items`. Lookup-only -
+  // services verify canonical item-list equality on hash match.
+  string source_snapshot_fingerprint = 5;
+  // Full snapshot of the selected source items. For very large snapshots, services may
+  // omit `items` from list/get responses and expose membership via dedicated RPCs.
+  repeated DatasetPreparationSourceItemSnapshot items = 6;
+}
+
+message DatasetPreparationRecipe {
+  // Optional persistent recipe id. Ad-hoc recipes leave this empty and use
+  // `recipe_fingerprint` as identity.
+  string id = 1;
+  // Display name for persistent recipes. Empty for ad-hoc recipes.
+  string name = 2;
+  // Owner of the persistent recipe row. Empty for ad-hoc recipes.
+  string owner_id = 3;
+  // Visibility of the persistent recipe. Ignored for ad-hoc recipes.
+  voplica.types.base.VisibilityType visibility = 4;
+  uint64 created_at = 5;
+  optional string description = 6;
+  // Source asset type this recipe operates on. Must match the source dataset.
+  voplica.types.base.AssetType asset_type = 10;
+  // NOTE: there is deliberately NO recipe-level category. Category is a per-TARGET property
+  // (`ImageDatasetPreparationTarget.category`): one recipe routinely carries a face target
+  // (CHARACTER_FACE) and a full-body target (CHARACTER_GENERIC) side by side.
+  // Hints which model families this recipe was designed for. Informational; the recipe
+  // can still be selected for any compatible training.
+  repeated voplica.types.ai.common.ModelFamily target_model_families = 12;
+  // File kinds every item must carry. Items missing any required kind count as missing
+  // work in plans/runs (subject to reuse policy). Caption WORK is configured separately on
+  // the preparation (`DatasetPreparationCaptioningConfig`), not on the recipe - recipes stay
+  // caption-free so tuning the captioner never rotates `recipe_fingerprint`.
+  repeated PreparedFileKind required_file_kinds = 14;
+  // Media-specific recipe section. Exactly one variant must be set and must match
+  // `asset_type`. Extension: future content modalities are added as new oneof arms with
+  // tags >= 25. Adding a new arm does not affect the `recipe_fingerprint` of existing
+  // recipes (only the arm that is actually set contributes to the canonical payload).
+  oneof media_recipe {
+    ImageDatasetPreparationRecipe image = 20;
+    VideoDatasetPreparationRecipe video = 21;
+    AudioDatasetPreparationRecipe audio = 22;
+    Model3DDatasetPreparationRecipe model_3d = 23;
+  }
+  string recipe_fingerprint = 30;
+  // Version of preparation code/models. Must be included in `recipe_fingerprint`.
+  // Bump when worker outputs change for the same recipe payload.
+  string implementation_version = 31;
+  // Free-form metadata. Only entries that affect preparation outputs should be included
+  // here; otherwise document-only metadata belongs in `description` or external storage.
+  google.protobuf.Struct metadata = 32;
+}
+
+// Image-specific recipe. `targets` defines the prepared image variants the recipe must
+// produce, for example "full_body_1024_square" and "face_1024_square".
+message ImageDatasetPreparationRecipe {
+  repeated ImageDatasetPreparationTarget targets = 1;
+  ImageBackgroundNormalization background_normalization = 3;
+  // When true, produce mask artifacts (kind=MASK) for every target.
+  bool generate_masks = 4;
+  // When true, produce alpha artifacts (kind=ALPHA) for every target.
+  bool generate_alpha_images = 5;
+  // When true, persist analysis metadata files (kind=ANALYSIS_METADATA).
+  bool preserve_analysis_metadata = 6;
+}
+
+// How a target expands over the image's subject instances.
+enum ImageTargetSubjectMode {
+  IMAGE_TARGET_SUBJECT_MODE_UNSPECIFIED = 0;
+  // ONE item per source asset; no subject dimension. For whole-image categories (STYLE,
+  // BACKGROUND, PLACE, ...) and plain full-image training. Recipes whose targets are ALL
+  // whole-image need no analysis and no subject layer at all (the ANALYSIS-FREE lane).
+  // Captioning is an INDEPENDENT axis (`DatasetPreparationCaptioningConfig.formats`):
+  // BACKGROUND / PLACE / GENERIC items are routinely auto-captioned; STYLE typically is not.
+  IMAGE_TARGET_SUBJECT_MODE_WHOLE_IMAGE = 1;
+  // One item PER IN-SCOPE SUBJECT INSTANCE (a group photo yields one item per selected
+  // person). WHICH instances are in scope is dataset-level configuration
+  // (`DatasetPreparation.subject_scope`) - the recipe stays dataset-agnostic and shareable.
+  IMAGE_TARGET_SUBJECT_MODE_PER_SUBJECT_INSTANCE = 2;
+}
+
+// What region of a subject instance drives the crop of a PER_SUBJECT target.
+enum ImageSubjectFraming {
+  IMAGE_SUBJECT_FRAMING_UNSPECIFIED = 0;
+  // The instance's bbox/mask (person body, object). The default.
+  IMAGE_SUBJECT_FRAMING_SUBJECT = 1;
+  // The instance's face region (CHARACTER subjects only). Video analog: the track's
+  // keyframe face region (`VideoSubjectTrack.keyframe_face_bbox`) drives the tracked
+  // crop window of PER_SUBJECT video targets.
+  IMAGE_SUBJECT_FRAMING_FACE = 2;
+}
+
+message ImageDatasetPreparationTarget {
+  // Stable target key, for example "full_body_1024_square" or "face_1024_square" - authored
+  // by the RECIPE CREATOR as a name for this output variant (a named output port); must be
+  // unique within one recipe. Workers stamp it onto every `PreparedItem` produced from this
+  // target; item filters and `ModelTrainingDataset.target_keys` reference it (the precision
+  // filter beside the semantic `categories` filter).
+  string key = 1;
+  voplica.types.image.ImageSize resolution = 2;
+  optional voplica.types.image.AspectRatioType aspect_ratio = 3;
+  ImageDatasetCropPolicy crop_policy = 4;
+  // Optional natural-language hint used to bias the crop (for example "face" or, for
+  // WHOLE_IMAGE targets, what to keep when cropping to the aspect ratio).
+  optional string preferred_focus_prompt = 5;
+  // When > 0, a subject instance smaller than this (pixels, either dimension of the framed
+  // region) is skipped for THIS target only - e.g. a higher threshold for a full-body
+  // target and a lower one for a face target. 0 means no size threshold.
+  uint32 min_subject_side_pixels = 6;
+  // What KIND of training example this target produces (CHARACTER_FACE for a face crop,
+  // CHARACTER_GENERIC for a full-body crop, OBJECT, STYLE, ...). REQUIRED; the structural
+  // face-vs-body discriminator that training selections filter by. Fingerprint-affecting.
+  voplica.types.ai.common.SubjectCategory category = 7;
+  // Whole-image vs per-subject-instance expansion. Fingerprint-affecting.
+  ImageTargetSubjectMode subject_mode = 8;
+  // PER_SUBJECT targets only: which region drives the crop. Fingerprint-affecting.
+  ImageSubjectFraming framing = 9;
+  // PER_SUBJECT targets only: skip instances whose `quality_score` is below this (0 = no
+  // threshold). Drops tiny/blurry background faces before any GPU work.
+  float min_instance_quality = 10;
+}
+
+message ImageBackgroundNormalization {
+  oneof strategy {
+    MaskedBackgroundGeneration masked_background_generation = 1;
+    SimilarBackgroundExtension similar_background_extension = 2;
+    RandomColorBackgroundExtension random_color_extension = 3;
+    BackgroundCrop background_crop = 4;
+  }
+}
+
+message MaskedBackgroundGeneration {
+  // 1.0 keeps the masked area exactly. Lower values let the worker blend masked pixels
+  // into the regenerated background.
+  double keep_masked_area_coefficient = 1;
+  // 0 means "implementation-defined default" (typically Min(365, dataset_assets_count)).
+  uint32 preferred_background_variations_count = 2;
+}
+
+message SimilarBackgroundExtension {
+}
+
+message RandomColorBackgroundExtension {
+}
+
+message BackgroundCrop {
+  // Optional prompt to bias what to keep when cropping (for example "face" for full-body
+  // character preparation).
+  optional string preferred_centric_position_selection_prompt = 1;
+}
+
+// Video-specific recipe. Like images, `targets` defines the named prepared clip variants the
+// recipe must produce, so prepared video artifacts are addressable by `target_key` (training
+// selections and artifact reads filter by target exactly as for images).
+message VideoDatasetPreparationRecipe {
+  repeated VideoDatasetPreparationTarget targets = 1;
+  // When true, each produced clip additionally carries its extracted audio segment as an
+  // AUDIO_TRACK companion file (time-aligned with the clip). The clip's own muxed audio is
+  // preserved regardless - audio-capable trainers (LTX `do_audio`) read it from the clip.
+  bool extract_audio = 2;
+  optional string subject_selection_prompt = 3;
+  bool preserve_analysis_metadata = 4;
+}
+
+message VideoDatasetPreparationTarget {
+  // Stable target key, for example "clip_720p_24fps_5s" - authored by the recipe creator,
+  // unique within one recipe, stamped onto produced items, referenced by selection filters
+  // (see the image target's `key` comment).
+  string key = 1;
+  voplica.types.image.ImageSize resolution = 2;
+  uint32 frame_rate = 3;
+  uint64 clip_length_ms = 4;
+  // What KIND of training example this target produces (mirrors the image target field;
+  // `PreparedItem.category` is denormalized from it). REQUIRED; fingerprint-affecting.
+  voplica.types.ai.common.SubjectCategory category = 5;
+  // Whole-clip vs per-subject-instance expansion. PER_SUBJECT_INSTANCE expands over the
+  // asset's in-scope subject instances' `video_track` locators: the produced clip windows
+  // are intersected with the track's [start_ms, end_ms] and cropped to a smoothed window
+  // that follows the tracked subject. Fingerprint-affecting.
+  ImageTargetSubjectMode subject_mode = 6;
+  // PER_SUBJECT targets only: which region drives the tracked crop window - the subject
+  // box or the track's keyframe face region (CHARACTER subjects). Fingerprint-affecting.
+  ImageSubjectFraming framing = 7;
+  // When > 0, a subject instance whose framed region (at the track keyframe) is smaller
+  // than this in pixels (either dimension) is skipped for THIS target only. 0 = no
+  // threshold. Mirrors the image target field.
+  uint32 min_subject_side_pixels = 8;
+  // PER_SUBJECT targets only: skip instances whose `quality_score` is below this (0 = no
+  // threshold). Mirrors the image target field.
+  float min_instance_quality = 9;
+}
+
+message AudioDatasetPreparationRecipe {
+  uint32 sample_rate = 1;
+  uint32 channels_count = 2;
+  uint64 segment_length_ms = 3;
+  bool normalize_loudness = 4;
+  bool remove_silence = 5;
+}
+
+// 3D-asset preparation. Placeholder shape - extend with actual normalization fields when
+// the first 3D training worker lands. Behavior-affecting fields contribute to
+// `recipe_fingerprint`; display-only fields go into the parent recipe's `metadata`.
+message Model3DDatasetPreparationRecipe {
+  // Target polygon count after decimation. 0 means no decimation.
+  uint32 target_polygon_count = 1;
+  // Target texture resolution in pixels (longest side). 0 means keep source resolution.
+  uint32 target_texture_resolution = 2;
+  // Re-export to a canonical format (for example "glb", "obj", "fbx"). Empty preserves
+  // the source format.
+  optional string canonical_format = 3;
+  // When true, normalize the mesh into a unit-sized bounding box centered at the origin.
+  bool normalize_scale_and_origin = 4;
+  // Optional captioning prompt for renders used by multimodal text encoders.
+  optional string subject_selection_prompt = 5;
+}
+
+// Caption text format. Trainers pick the format compatible with the text encoder(s) of the
+// trained model family (SDXL -> TAGS; FLUX/SD3 -> NATURAL_LANGUAGE). Captions live ON
+// prepared items, one per format (see `PreparedItemCaption`).
+enum DatasetCaptionFormat {
+  DATASET_CAPTION_FORMAT_UNSPECIFIED = 0;
+  // Short comma-separated tags, commonly used by SD1/SDXL training recipes.
+  DATASET_CAPTION_FORMAT_TAGS = 1;
+  // Natural-language description, commonly used by FLUX, SD3, video, and multimodal recipes.
+  DATASET_CAPTION_FORMAT_NATURAL_LANGUAGE = 2;
+  // Verbatim transcript for audio/video recipes.
+  DATASET_CAPTION_FORMAT_TRANSCRIPT = 3;
+  // Custom format defined by the worker, with details in
+  // `DatasetCaptionGenerationConfig.generation_params`.
+  DATASET_CAPTION_FORMAT_CUSTOM = 100;
+}
+
+// Auto-generation tuning for item captions. The captioner reads, per item: the item's
+// TRAINING_SAMPLE crop, the WHOLE source image (context), the membership row's
+// `auto_caption_hint`, the target's `category`, and - when the item belongs to a subject -
+// the subject's name/description.
+message DatasetCaptionGenerationConfig {
+  // Optional class word hint fed to the captioner (e.g. "man", "dog", "car"). It becomes part
+  // of the generated text as descriptive content; it is NOT a training-time trigger word.
+  optional string class_word = 1;
+  // Optional fixed prefix/suffix wrapped around the generated text.
+  optional string prepend_text = 2;
+  optional string append_text = 3;
+  voplica.types.ai.common.CaptioningConflictStrategy conflict_strategy = 4;
+  // Model families this caption style targets (informational hint for picking a captioner).
+  repeated voplica.types.ai.common.ModelFamily target_model_families = 5;
+  // Free-form generation parameters consumed by the captioning worker (model name, task
+  // token, max tokens, temperature, ...).
+  google.protobuf.Struct generation_params = 20;
+}
+
+// Who produced a piece of dataset content (a prepared file or a caption).
+enum DatasetContentProvenance {
+  DATASET_CONTENT_PROVENANCE_UNSPECIFIED = 0;
+  // Produced by a worker (preparation or captioning).
+  DATASET_CONTENT_PROVENANCE_AUTO_GENERATED = 1;
+  // Supplied by the user for a slot no worker had filled (own crop, own mask, own caption).
+  DATASET_CONTENT_PROVENANCE_USER_AUTHORED = 2;
+  // Auto-generated, then replaced/edited by the user. Re-generation must not overwrite
+  // these unless explicitly forced.
+  DATASET_CONTENT_PROVENANCE_USER_EDITED = 3;
+}
+
+// Which subject instances PER_SUBJECT_INSTANCE targets expand over. Dataset-local
+// configuration on the preparation (NOT the recipe - recipes are shareable across datasets
+// and their fingerprint must stay dataset-agnostic).
+enum DatasetSubjectScopeMode {
+  DATASET_SUBJECT_SCOPE_MODE_UNSPECIFIED = 0;
+  // Default: only instances assigned to `subject_ids`. Nothing is cropped until the user
+  // (or the fast path / a reference-defined subject) put identities in scope - UNASSIGNED
+  // and USER_REJECTED instances are never prepared.
+  DATASET_SUBJECT_SCOPE_MODE_LISTED_SUBJECTS = 1;
+  // Instances assigned to ANY subject identity (never UNASSIGNED/REJECTED ones).
+  DATASET_SUBJECT_SCOPE_MODE_ALL_ASSIGNED_SUBJECTS = 2;
+}
+
+enum DatasetFastPathMode {
+  // Same as AUTO.
+  DATASET_FAST_PATH_MODE_UNSPECIFIED = 0;
+  // Default: auto-scope only when the dataset has exactly ONE identity with assigned
+  // instances (dominant) OR exactly one reference-defined (USER_CREATED with references)
+  // subject; otherwise fail with FAILED_PRECONDITION ("curate subjects first").
+  DATASET_FAST_PATH_MODE_AUTO = 1;
+  // Force the fast path regardless of how many identities exist: auto-scope to ALL
+  // identities with assigned instances (equivalent to ALL_ASSIGNED_SUBJECTS).
+  DATASET_FAST_PATH_MODE_FORCE = 2;
+  // Never auto-scope: an uncurated PER_SUBJECT recipe always fails with
+  // FAILED_PRECONDITION until the user sets a subject scope.
+  DATASET_FAST_PATH_MODE_DISABLED = 3;
+}
+
+message DatasetPreparationSubjectScope {
+  DatasetSubjectScopeMode mode = 1;
+  // For LISTED_SUBJECTS.
+  repeated string subject_ids = 2;
+  // Cost guard for crowd photos. 0 = unlimited.
+  uint32 max_instances_per_asset_per_target = 3;
+  // Fast-path override (applies only while `mode` is unset/empty - a curated scope always
+  // wins). UNSPECIFIED = AUTO.
+  DatasetFastPathMode fast_path_mode = 4;
+}
+
+message DatasetPreparationCaptioningConfig {
+  // Formats auto-generated for every item (e.g. [TAGS, NATURAL_LANGUAGE]). Missing formats
+  // count as caption WORK in plans/runs. EMPTY disables auto-captioning (typical for STYLE -
+  // items then train caption-less with trigger words only). Independent of the targets'
+  // `subject_mode`: whole-image BACKGROUND/PLACE items are captioned like any crop (the
+  // "crop" is the whole-image variant).
+  repeated DatasetCaptionFormat formats = 1;
+  DatasetCaptionGenerationConfig generation_config = 2;
+}
+
+// The mutable container of prepared items for one (source_dataset, recipe). Find-or-created
+// by `PrepareDataset` (or at training start for recipe selections).
+message DatasetPreparation {
+  string id = 1;
+  string source_dataset_id = 2;
+  // Recipe this preparation materializes (persistent id when available; always carries the
+  // fingerprint). Unique key: (source_dataset_id, recipe_fingerprint).
+  optional string recipe_id = 3;
+  string recipe_fingerprint = 4;
+  voplica.types.base.AssetType asset_type = 5;
+  string owner_id = 6;
+  // Optional user-assigned display name ("Anna — face+body v2"). Pure display metadata:
+  // mutable via `UpdateDatasetPreparationConfig`, settable at `PrepareDataset` time, and
+  // NEVER part of any fingerprint or reuse key. UIs list preparations as `name (id)` and
+  // fall back to the recipe name / fingerprint when unnamed.
+  optional string name = 13;
+  // Seconds since epoch.
+  uint64 created_at = 7;
+  uint64 updated_at = 8;
+  // The ONLY change signal, bumped on: item file add/override/reset, caption
+  // upsert/delete/generate, exclude/unexclude, and subject reassignment touching this
+  // preparation's items. Config changes below do NOT bump it (they alter future planned
+  // work, not frozen content).
+  uint64 version = 9;
+  // Full recipe payload for AD-HOC recipes (no `recipe_id`), persisted so auto-preparation
+  // can still resolve the recipe later. Populated in responses only when
+  // `GetDatasetPreparationRequest.include_full_recipe = true`.
+  optional DatasetPreparationRecipe embedded_recipe = 10;
+  // MUTABLE, dataset-local configuration. NOT part of any fingerprint.
+  DatasetPreparationSubjectScope subject_scope = 11;
+  DatasetPreparationCaptioningConfig captioning = 12;
+  uint64 items_count = 20;
+  // Distinct source assets having at least one item.
+  uint64 prepared_assets_count = 21;
+  uint64 excluded_items_count = 22;
+}
+
+// One file of a prepared item (at most ONE per kind - service-enforced).
+message PreparedItemFile {
+  PreparedFileKind kind = 1;
+  voplica.types.file.FileInfo file = 2;
+  DatasetContentProvenance provenance = 3;
+  string prepared_file_fingerprint = 4;
+  // Seconds since epoch.
+  uint64 updated_at = 5;
+}
+
+// One caption of a prepared item (at most ONE per format - service-enforced). The text
+// never contains trigger words - those are applied per training selection at load time.
+message PreparedItemCaption {
+  DatasetCaptionFormat format = 1;
+  string text = 2;
+  DatasetContentProvenance provenance = 3;
+  // Seconds since epoch. Together with `provenance`, lets a UI surface cross-format
+  // staleness (the user edited NATURAL_LANGUAGE; TAGS is still AUTO from an older pass).
+  uint64 updated_at = 4;
+}
+
+// Captioning context assembled on demand (fetching option), so the captioning worker can
+// read everything it needs in the same paged stream as the items.
+message PreparedItemCaptioningContext {
+  // The WHOLE source image (context for describing the crop).
+  optional voplica.types.file.FileInfo source_file = 1;
+  // The membership row's `auto_caption_hint` ("John, a 30yo man with brown hair").
+  optional string auto_caption_hint = 2;
+  // The assigned subject's name/description, when any ("Anna"; "gold bracelet with an
+  // emerald stone").
+  optional string subject_name = 3;
+  optional string subject_description = 4;
+}
+
+// One training example. Natural key:
+// (preparation_id, source_asset_id, subject_instance_id|"", target_key).
+message PreparedItem {
+  string id = 1;
+  string preparation_id = 2;
+  string source_dataset_id = 3;
+  string source_asset_id = 4;
+  // The detected subject instance this item crops (see
+  // voplica/types/ai/dataset/dataset_subject.proto). EMPTY for WHOLE_IMAGE targets.
+  optional string subject_instance_id = 5;
+  // Denormalized CURRENT identity assignment of that instance. Curation rewrites it (and
+  // bumps the preparation version - subject labels are frozen snapshot content). Empty for
+  // whole-image items and unassigned instances.
+  optional string subject_id = 6;
+  string target_key = 7;
+  // Denormalized from the recipe target - the structural face-vs-body-vs-style
+  // discriminator training selections filter by.
+  voplica.types.ai.common.SubjectCategory category = 8;
+  // At most one per kind.
+  repeated PreparedItemFile files = 9;
+  // At most one per format.
+  repeated PreparedItemCaption captions = 10;
+  // Curation: excluded items are omitted from future snapshots (and from training).
+  bool excluded = 11;
+  optional string excluded_reason = 12;
+  optional voplica.types.image.ImageSize resolution = 13;
+  optional voplica.types.image.AspectRatioType aspect_ratio = 14;
+  string item_fingerprint = 15;
+  // Seconds since epoch.
+  uint64 created_at = 16;
+  uint64 updated_at = 17;
+  google.protobuf.Struct metadata = 20;
+  // Populated only when requested via `PreparedItemFetchingOptions.include_captioning_context`.
+  optional PreparedItemCaptioningContext captioning_context = 21;
+}
+
+// Summary of the recipe used by a snapshot, for cheap list rendering.
+message DatasetPreparationSnapshotRecipeSummary {
+  optional string recipe_id = 1;
+  string recipe_fingerprint = 2;
+  string implementation_version = 3;
+  voplica.types.base.AssetType asset_type = 4;
+  // Categories of the recipe's targets (e.g. [CHARACTER_GENERIC, CHARACTER_FACE]).
+  repeated voplica.types.ai.common.SubjectCategory target_categories = 5;
+  repeated PreparedFileKind required_file_kinds = 6;
+  // Recipe display name when a persistent recipe was used. Empty otherwise.
+  string recipe_name = 7;
+}
+
+// An immutable, instant, lifecycle-free SNAPSHOT of a `DatasetPreparation` at a `version` -
+// the frozen training data a run consumed. Find-or-created by `(preparation_id, version)`:
+// reused when that version is already frozen, otherwise the current NON-EXCLUDED items
+// (files + captions + subject labels) are frozen in one operation. Born complete; never
+// changes. Preparation PROGRESS lives on `DatasetPreparationRun`, never here.
+message DatasetPreparationSnapshot {
+  string id = 1;
+  // The preparation and the version this snapshot froze.
+  string preparation_id = 2;
+  uint64 version = 3;
+  string source_dataset_id = 4;
+  optional string recipe_id = 5;
+  string recipe_fingerprint = 6;
+  // Gated by `DatasetPreparationSnapshotFetchingOptions.include_full_recipe`.
+  optional DatasetPreparationRecipe embedded_recipe = 7;
+  DatasetPreparationSnapshotRecipeSummary recipe_summary = 8;
+  // Content identity over the frozen items: hash{preparation_id, version, items sorted by
+  // (source_asset_id, subject_instance_id|"", target_key) -> {item_fingerprint,
+  // subject_id|"", captions: sorted format -> sha256(text)}}. Covers visuals AND captions
+  // AND subject labels - the three things training consumes. Non-unique verify hint.
+  string content_fingerprint = 9;
+  // Seconds since epoch.
+  uint64 created_at = 10;
+  uint64 items_count = 11;
+  uint64 prepared_assets_count = 12;
+  // Distinct subject identities frozen into the items.
+  uint64 subjects_count = 13;
+  // Capability summary so training resolution can fail fast (e.g. "no MASK files",
+  // "no TAGS captions") without paging items.
+  repeated PreparedFileKind file_kinds_present = 14;
+  repeated DatasetCaptionFormat caption_formats_present = 15;
+  // Owner of the preparation at freeze time. Visibility for other users follows the source
+  // dataset visibility plus the dataset's `download_allowed` flag.
+  string owner_id = 16;
+}
+
+// One frozen item of a snapshot - a faithful copy of a `PreparedItem` (files + captions
+// nested), so ONE paged read streams complete (image, caption[, mask]) tuples.
+message DatasetPreparationSnapshotItem {
+  string id = 1;
+  string preparation_snapshot_id = 2;
+  // Lineage to the live item this row froze.
+  string prepared_item_id = 3;
+  string source_asset_id = 4;
+  optional string subject_instance_id = 5;
+  // The identity assignment AT FREEZE TIME (the filter target of training selections).
+  optional string subject_id = 6;
+  string target_key = 7;
+  voplica.types.ai.common.SubjectCategory category = 8;
+  repeated PreparedItemFile files = 9;
+  repeated PreparedItemCaption captions = 10;
+  string item_fingerprint = 11;
+  optional voplica.types.image.ImageSize resolution = 12;
+  optional voplica.types.image.AspectRatioType aspect_ratio = 13;
+}
+
+// One expected-but-missing training example (readiness unit inside plan/run items).
+message ExpectedPreparedItem {
+  // Empty for WHOLE_IMAGE targets and for assets whose instances are not discovered yet.
+  optional string subject_instance_id = 1;
+  string target_key = 2;
+  // Visual work still needed for this item.
+  repeated PreparedFileKind missing_file_kinds = 3;
+  // Caption work still needed (per `DatasetPreparationCaptioningConfig.formats`).
+  repeated DatasetCaptionFormat missing_caption_formats = 4;
+}
+
+message DatasetPreparationPlanItem {
+  string source_asset_id = 1;
+  string source_file_id = 2;
+  string source_item_fingerprint = 3;
+  DatasetPreparationPlanAction action = 4;
+  // True when the asset has no subject-instance analysis yet and the recipe has
+  // PER_SUBJECT_INSTANCE targets: the run will discover + auto-assign instances first, then
+  // derive the concrete expected items. `expected_items` is then a lower bound (whole-image
+  // targets only).
+  bool requires_instance_discovery = 5;
+  // Exactly what is missing for this asset. Empty for action=REUSE_PREPARED_ITEM.
+  repeated ExpectedPreparedItem expected_items = 6;
+  optional string message = 7;
+}
+
+// Readiness answer for "what do the selected source assets still need before training?".
+// Computed against the dataset's `DatasetPreparation` for the recipe (which may not exist
+// yet - then everything is missing).
+message DatasetPreparationPlan {
+  string source_dataset_id = 1;
+  DatasetPreparationReusePolicy reuse_policy = 2;
+  string recipe_fingerprint = 3;
+  // The preparation the plan was computed against. Empty when none exists yet.
+  optional string preparation_id = 4;
+  uint64 preparation_version = 5;
+  // Per-asset readiness. For very large selections the service MAY truncate this list (the
+  // counts below always cover the FULL selection); `items_truncated = true` signals that.
+  repeated DatasetPreparationPlanItem items = 6;
+  bool items_truncated = 7;
+  // Per-asset action counts (v2-compatible semantics).
+  uint64 items_to_prepare_count = 8;
+  uint64 items_to_reuse_count = 9;
+  uint64 items_to_skip_count = 10;
+  uint64 items_to_fail_count = 11;
+  // Item-granular work counts (what the run would actually produce / cost).
+  uint64 expected_items_count = 12;
+  uint64 files_to_generate_count = 13;
+  uint64 captions_to_generate_count = 14;
+  uint64 assets_requiring_instance_discovery_count = 15;
+}
+
+// Process-lineage record for one dataset preparation run: "this execution considered THESE
+// frozen source inputs and produced/reused items in the dataset's `DatasetPreparation`".
+// The run owns everything process-shaped: the frozen work items (paged via
+// `ListDatasetPreparationRunItems`), progress counts, and terminal status.
+// `DatasetPreparationSnapshot`s are deliberately NOT tied to runs - they are instant freezes
+// of the preparation, and one version may have been filled by many runs.
+message DatasetPreparationRun {
+  string id = 1;
+  // The mutable preparation this run writes into.
+  string preparation_id = 2;
+  string source_dataset_id = 3;
+  // Denormalized from the preparation for filtering.
+  string recipe_fingerprint = 4;
+  // User who triggered the run (and pays for it).
+  string owner_id = 5;
+  // The workflow execution that runs the preparation: for a standalone preparation run, the root execution; for one
+  // started by a combined prepare-and-train run, the child execution (the parent is in `root_workflow_execution_id`).
+  // Empty until the execution is launched.
+  optional string workflow_execution_id = 6;
+  // Root workflow execution that triggered this run. Equals `workflow_execution_id` for
+  // standalone runs; the combined parent for prepare-and-train children. Always populated
+  // when the run is created (before any workflow starts).
+  string root_workflow_execution_id = 7;
+  voplica.types.base.JobStatus status = 8;
+  // Seconds since epoch.
+  uint64 started_at = 9;
+  optional uint64 completed_at = 10;
+  optional string message = 11;
+  // Snapshot of the reuse policy used for this run.
+  DatasetPreparationReusePolicy reuse_policy = 12;
+  // Fingerprint + size of the run's frozen source snapshot. The item list is paged via
+  // `ListDatasetPreparationRunItems` (never embedded).
+  string source_snapshot_fingerprint = 13;
+  uint64 source_items_count = 14;
+  uint64 prepared_items_count = 15;
+  uint64 reused_items_count = 16;
+  uint64 skipped_items_count = 17;
+  uint64 failed_items_count = 18;
+  // Item-granular outcome counts.
+  uint64 files_generated_count = 19;
+  uint64 captions_generated_count = 20;
+}
+
+// One frozen work item of a preparation run: the source item the run considered plus its
+// planned action and exactly which files/captions were missing at plan time. Persisted at
+// `PrepareDataset` time and paged via `ListDatasetPreparationRunItems`. Authoritative for
+// the worker - it MUST NOT re-query dataset membership.
+message DatasetPreparationRunItem {
+  string preparation_run_id = 1;
+  DatasetPreparationSourceItemSnapshot source_item = 2;
+  DatasetPreparationPlanAction planned_action = 3;
+  bool requires_instance_discovery = 4;
+  repeated ExpectedPreparedItem expected_items = 5;
+  optional string message = 6;
+}
+
+message DatasetPreparationSnapshotFetchingOptions {
+  // When true, the snapshot response also includes the full `DatasetPreparationRecipe`
+  // (resolved either from the persistent recipe row or from the stored ad-hoc payload).
+  // Frozen items are never embedded - page them via `ListDatasetPreparationSnapshotItems`.
+  bool include_full_recipe = 1;
+}
+
+// File hydration + context assembly for prepared items and frozen snapshot items.
+message PreparedItemFetchingOptions {
+  // When set, item file `FileInfo`s are hydrated with their variants.
+  optional voplica.types.file.FilesRetriever files_retriever = 1;
+  // When true, `PreparedItem.captioning_context` is populated (source file + hint +
+  // subject name/description) - the captioning worker's one-stream read.
+  bool include_captioning_context = 2;
+}

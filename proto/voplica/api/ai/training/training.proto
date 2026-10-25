@@ -1,0 +1,607 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.ai.training;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.ai.training";
+option go_package = "voplica.com/api/ai/training";
+option csharp_namespace = "Voplica.Api.Ai.Training";
+import "voplica/auth.proto";
+import "voplica/types/ai/training/training.proto";
+import "voplica/types/ai/training/training_workflow.proto";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/workflow/privacy_mode.proto";
+
+message CreateModelTrainingJobRequest {
+  // Authoritative training configuration. Dataset selections live in
+  // `training_config.training_datasets`.
+  voplica.types.ai.training.ModelTrainingConfig training_config = 1;
+  // Optional destination `GenModel` for produced checkpoints. When set, each saved
+  // checkpoint also creates a `ModelVariant` under this model. When empty, checkpoints are
+  // stored against the job only and a variant can be created later via
+  // `CreateModelVariantFromTrainingCheckpoint`. Separate from
+  // `training_config.base_model_variant_id` and `training_config.continue_training`.
+  optional string output_model_id = 2;
+}
+
+message CreateModelTrainingJobResponse {
+  voplica.types.ai.training.ModelTrainingJob model_training_job = 1;
+}
+
+message GetModelTrainingJobRequest {
+  string model_training_job_id = 1;
+}
+
+message GetModelTrainingJobResponse {
+  voplica.types.ai.training.ModelTrainingJob model_training_job = 1;
+}
+
+// Creates a `ModelVariant` from a previously saved training checkpoint. Used when the
+// training job had no `output_model_id` (so no variants were created automatically) and the
+// user later decides to publish a specific checkpoint as a model variant - or to publish an
+// additional checkpoint as a separate variant. The new variant adopts the checkpoint's
+// inference-ready weights (`model_asset_id`) and its denormalized `model_family`, and the
+// service stamps the checkpoint's `model_variant_id` with the created variant.
+message CreateModelVariantFromTrainingCheckpointRequest {
+  string checkpoint_id = 1;
+  // Destination `GenModel` the new variant is attached to. Must be owned by the caller.
+  string model_id = 2;
+  // Optional display name for the variant (defaults to the checkpoint name).
+  optional string variant_name = 3;
+  repeated string trigger_words = 4;
+  // If true the variant becomes eligible for revenue sharing. Absent ⇒ defaults from the
+  // parent model's `revenue_sharing_preferred`.
+  optional bool revenue_share = 5;
+  // If true anyone who can use the model can also download the variant files.
+  bool download_allowed = 6;
+  // Optional base variant to inherit shared model files from (text encoder, VAE, etc.) when
+  // the checkpoint only ships the trained weights. Avoids re-uploading multi-GB shared
+  // components. See `CreateModelVariantRequest.based_on_model_variant_id`.
+  optional string based_on_model_variant_id = 7;
+}
+
+message CreateModelVariantFromTrainingCheckpointResponse {
+  string model_variant_id = 1;
+}
+
+message AttachModelTrainingJobDatasetRequest {
+  string model_training_job_id = 1;
+  // Selection to append to `training_config.training_datasets`.
+  voplica.types.ai.training.ModelTrainingDataset training_dataset = 2;
+}
+
+message AttachModelTrainingJobDatasetResponse {
+  // The updated job. The appended selection carries its service-computed
+  // `data_selection_fingerprint` (the key later needed by `DetachModelTrainingJobDataset`).
+  voplica.types.ai.training.ModelTrainingJob model_training_job = 1;
+}
+
+message DetachModelTrainingJobDatasetRequest {
+  string model_training_job_id = 1;
+  // Source dataset id to remove from `training_config.training_datasets`. If the job has
+  // multiple selections for the same dataset, also provide `data_selection_fingerprint`.
+  string source_dataset_id = 2;
+  // Optional disambiguation for jobs that reference the same dataset multiple times.
+  optional string data_selection_fingerprint = 3;
+}
+
+message DetachModelTrainingJobDatasetResponse {
+  // The updated job after the selection was removed.
+  voplica.types.ai.training.ModelTrainingJob model_training_job = 1;
+}
+
+message SampleNowModelTrainingJobRequest {
+  string model_training_job_id = 1;
+}
+
+message SampleNowModelTrainingJobResponse {
+}
+
+message SaveNowModelTrainingJobModelVariantRequest {
+  string model_training_job_id = 1;
+}
+
+message SaveNowModelTrainingJobModelVariantResponse {
+}
+
+message UpdateModelTrainingJobRequest {
+  string model_training_job_id = 1;
+  // Set the destination model for produced checkpoints. Pass an empty string to detach
+  // (future checkpoints will not create variants). Only mutable while the job has not
+  // started.
+  optional string output_model_id = 2;
+  optional voplica.types.ai.training.ModelTrainingStopTrigger stop_trigger = 3;
+  optional bool sample_after_save = 4;
+  optional uint64 steps_sample_threshold = 5;
+  optional voplica.types.ai.training.ModelSavingParams saving_params = 6;
+}
+
+message UpdateModelTrainingJobResponse {
+  voplica.types.ai.training.ModelTrainingJob model_training_job = 1;
+}
+
+message StartModelTrainingJobRequest {
+  string model_training_job_id = 1;
+  // Optional client-provided idempotency key. A retry (double-click, network replay) with the
+  // same key returns the already-started run instead of creating a second one. Independent of
+  // the single-in-flight-run rule (a job can have at most one PENDING/RUNNING run).
+  optional string idempotency_key = 2;
+  voplica.types.workflow.WorkflowPrivacyMode privacy_mode = 3;
+}
+
+message StartModelTrainingJobResponse {
+  // Root workflow execution id of the started workflow. For training-only runs this is
+  // also the inner training workflow execution; for combined `ai.prepare_and_train_model_workflow`
+  // runs this is the combined parent execution and the inner training-child execution id
+  // is populated on `ModelTrainingRun.workflow_execution_id` after the training child
+  // actually starts. The two ids together appear on `ModelTrainingRun` as
+  // `root_workflow_execution_id` and `workflow_execution_id`.
+  string workflow_execution_id = 1;
+  // Persisted training run row id.
+  string model_training_run_id = 2;
+}
+
+message CancelModelTrainingJobRequest {
+  string model_training_job_id = 1;
+}
+
+message CancelModelTrainingJobResponse {
+  // Typically returns CANCELLING immediately, transitioning to CANCELLED once the worker
+  // acknowledges the cancellation.
+  voplica.types.base.JobStatus job_status = 1;
+}
+
+message GetModelTrainingSamplesGroupRequest {
+  string samples_group_id = 1;
+  // When set, hydrates each `ModelTrainingSample.asset.file_variant_groups` (omitted by
+  // default) so the dashboard can render the generated sample files.
+  optional voplica.types.file.FilesRetriever sample_files_retriever = 2;
+}
+
+message GetModelTrainingSamplesGroupResponse {
+  voplica.types.ai.training.ModelTrainingSamplesGroup sample_group = 1;
+}
+
+message GetModelTrainingSampleRequest {
+  string sample_id = 1;
+  // When set, hydrates `ModelTrainingSample.asset.file_variant_groups` (omitted by
+  // default) so the dashboard can render the generated sample file.
+  optional voplica.types.file.FilesRetriever sample_files_retriever = 2;
+}
+
+message GetModelTrainingSampleResponse {
+  voplica.types.ai.training.ModelTrainingSample sample = 1;
+}
+
+// List endpoints follow the house pattern (see `ListModelsRequest`): an optional `filters`
+// message, an explicit `sort` message with a typed sort key, `limit`, and the
+// `cursor`/`before`/`check_more_available` keyset-pagination triple (tags 10-12).
+message ListModelTrainingSampleGroupsRequest {
+  string model_training_job_id = 1;
+  optional ListModelTrainingSampleGroupsFilters filters = 2;
+  int64 limit = 3;
+  ListModelTrainingSampleGroupsSorting sort = 4;
+  // When set, hydrates each returned `ModelTrainingSample.asset.file_variant_groups`
+  // (omitted by default) so the dashboard can render the generated sample files.
+  optional voplica.types.file.FilesRetriever sample_files_retriever = 5;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListModelTrainingSampleGroupsFilters {
+  // Restrict to a single run.
+  optional string model_training_run_id = 1;
+  // Only return groups produced alongside a checkpoint save.
+  optional bool only_with_checkpoint = 2;
+  // Inclusive step range.
+  optional uint64 min_step = 3;
+  optional uint64 max_step = 4;
+}
+
+enum ModelTrainingSampleGroupSortKey {
+  MODEL_TRAINING_SAMPLE_GROUP_SORT_KEY_UNSPECIFIED = 0;
+  MODEL_TRAINING_SAMPLE_GROUP_SORT_KEY_STEP = 1;
+}
+
+message ListModelTrainingSampleGroupsSorting {
+  ModelTrainingSampleGroupSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListModelTrainingSampleGroupsResponse {
+  repeated voplica.types.ai.training.ModelTrainingSamplesGroup sample_groups = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message GetModelTrainingRunRequest {
+  oneof selector {
+    string model_training_run_id = 1;
+    // Inner workflow execution id (the one stored in `ModelTrainingRun.workflow_execution_id`).
+    // Returns nothing for combined runs whose inner training execution has not been
+    // launched yet.
+    string workflow_execution_id = 2;
+    // Root workflow execution id (the one returned to the caller by `StartModelTrainingJob`).
+    // For training-only runs it equals `workflow_execution_id`; for combined runs it is
+    // the combined parent workflow execution id. Use this when the caller only has the
+    // user-facing execution id.
+    string root_workflow_execution_id = 3;
+  }
+}
+
+message GetModelTrainingRunResponse {
+  voplica.types.ai.training.ModelTrainingRun run = 1;
+}
+
+message ListModelTrainingRunsRequest {
+  string model_training_job_id = 1;
+  optional ListModelTrainingRunsFilters filters = 2;
+  int64 limit = 3;
+  ListModelTrainingRunsSorting sort = 4;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListModelTrainingRunsFilters {
+  optional voplica.types.base.JobStatus status = 1;
+}
+
+enum ModelTrainingRunSortKey {
+  MODEL_TRAINING_RUN_SORT_KEY_UNSPECIFIED = 0;
+  MODEL_TRAINING_RUN_SORT_KEY_STARTED_AT = 1;
+}
+
+message ListModelTrainingRunsSorting {
+  ModelTrainingRunSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListModelTrainingRunsResponse {
+  repeated voplica.types.ai.training.ModelTrainingRun runs = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message GetModelTrainingCheckpointRequest {
+  string checkpoint_id = 1;
+}
+
+message GetModelTrainingCheckpointResponse {
+  voplica.types.ai.training.ModelTrainingCheckpoint checkpoint = 1;
+}
+
+// Listing checkpoints with `limit = 1` and `sort = {STEP, asc_sort:false}` returns the
+// latest checkpoint produced by a job/run - this replaces the removed denormalized
+// "latest checkpoint" pointer. Visual previews of training progress come from sample
+// groups (`ListModelTrainingSampleGroups` with `sample_files_retriever`); the variant
+// produced for a checkpoint, when any, is referenced by `ModelTrainingCheckpoint.model_variant_id`.
+message ListModelTrainingCheckpointsRequest {
+  string model_training_job_id = 1;
+  optional ListModelTrainingCheckpointsFilters filters = 2;
+  int64 limit = 3;
+  ListModelTrainingCheckpointsSorting sort = 4;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListModelTrainingCheckpointsFilters {
+  // Restrict to a single run.
+  optional string model_training_run_id = 1;
+  // Inclusive step range.
+  optional uint64 min_step = 2;
+  optional uint64 max_step = 3;
+  // Only checkpoints already attached to a model variant.
+  optional bool only_with_model_variant = 4;
+}
+
+enum ModelTrainingCheckpointSortKey {
+  MODEL_TRAINING_CHECKPOINT_SORT_KEY_UNSPECIFIED = 0;
+  MODEL_TRAINING_CHECKPOINT_SORT_KEY_STEP = 1;
+}
+
+message ListModelTrainingCheckpointsSorting {
+  ModelTrainingCheckpointSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListModelTrainingCheckpointsResponse {
+  repeated voplica.types.ai.training.ModelTrainingCheckpoint checkpoints = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message ListModelTrainingMetricsPointsRequest {
+  string model_training_job_id = 1;
+  optional ListModelTrainingMetricsPointsFilters filters = 2;
+  int64 limit = 3;
+  ListModelTrainingMetricsPointsSorting sort = 4;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListModelTrainingMetricsPointsFilters {
+  // Restrict to a single run. When empty, returns points for all runs of the job; the
+  // caller can disambiguate by `model_training_run_id` on each returned point.
+  optional string model_training_run_id = 1;
+  // Restrict to specific metric keys (for example ["loss", "unet_lr"]). Empty returns all.
+  repeated string metric_keys = 2;
+  // Inclusive step range.
+  optional uint64 min_step = 3;
+  optional uint64 max_step = 4;
+  // Inclusive captured_at range (milliseconds since epoch). Useful for showing the last
+  // N minutes of training.
+  optional uint64 min_captured_at = 5;
+  optional uint64 max_captured_at = 6;
+  // Optional downsampling. When >0, the service may return at most this many evenly spaced
+  // points per metric key (worker-side decimation). 0 means no downsampling.
+  uint32 max_points_per_metric_key = 7;
+}
+
+enum ModelTrainingMetricPointSortKey {
+  MODEL_TRAINING_METRIC_POINT_SORT_KEY_UNSPECIFIED = 0;
+  MODEL_TRAINING_METRIC_POINT_SORT_KEY_STEP = 1;
+  MODEL_TRAINING_METRIC_POINT_SORT_KEY_CAPTURED_AT = 2;
+}
+
+message ListModelTrainingMetricsPointsSorting {
+  ModelTrainingMetricPointSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListModelTrainingMetricsPointsResponse {
+  repeated voplica.types.ai.training.ModelTrainingMetricPoint points = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message ListModelTrainingRunDatasetsRequest {
+  oneof selector {
+    string model_training_run_id = 1;
+    string checkpoint_id = 2;
+  }
+}
+
+message ListModelTrainingRunDatasetsResponse {
+  // Resolved dataset lineage per selection (preparation snapshot + item filters +
+  // caption_format). The frozen examples themselves (incl. caption text) are paged via
+  // `ListDatasetPreparationSnapshotItems`. Inside a combined prepare-and-train run,
+  // `preparation_snapshot_id` may still be empty until preparation completes and the run's
+  // datasets are resolved.
+  repeated voplica.types.ai.training.ResolvedModelTrainingDataset resolved_training_datasets = 1;
+}
+
+message ListModelTrainingJobDatasetsRequest {
+  string model_training_job_id = 1;
+}
+
+message ListModelTrainingJobDatasetsResponse {
+  repeated voplica.types.ai.training.ModelTrainingDataset training_datasets = 1;
+}
+
+message ListDatasetTrainingJobsRequest {
+  // Source dataset id - returns the CALLER's own training jobs that selected this dataset
+  // (regardless of which snapshot was resolved). Other users' jobs are never returned, to
+  // avoid disclosing who trains on a public dataset. The public aggregate usage count is
+  // exposed separately as `Dataset.used_count`.
+  string source_dataset_id = 1;
+  optional ListDatasetTrainingJobsFilters filters = 2;
+  int64 limit = 3;
+  ListDatasetTrainingJobsSorting sort = 4;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListDatasetTrainingJobsFilters {
+  optional voplica.types.base.JobStatus status = 1;
+}
+
+enum DatasetTrainingJobSortKey {
+  DATASET_TRAINING_JOB_SORT_KEY_UNSPECIFIED = 0;
+  DATASET_TRAINING_JOB_SORT_KEY_CREATED_AT = 1;
+}
+
+message ListDatasetTrainingJobsSorting {
+  DatasetTrainingJobSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListDatasetTrainingJobsResponse {
+  repeated voplica.types.ai.training.ModelTrainingJob model_training_jobs = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message ListModelTrainingJobsRequest {
+  optional ListModelTrainingJobsFilters filters = 1;
+  int64 limit = 2;
+  ListModelTrainingJobsSorting sort = 3;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListModelTrainingJobsFilters {
+  // Empty = all statuses. Multiple values OR together (e.g. [PENDING, RUNNING] = the
+  // "active trainings" view; [COMPLETED, FAILED, CANCELLED] = past trainings).
+  repeated voplica.types.base.JobStatus statuses = 1;
+}
+
+enum ModelTrainingJobSortKey {
+  MODEL_TRAINING_JOB_SORT_KEY_UNSPECIFIED = 0;
+  MODEL_TRAINING_JOB_SORT_KEY_CREATED_AT = 1;
+}
+
+message ListModelTrainingJobsSorting {
+  ModelTrainingJobSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListModelTrainingJobsResponse {
+  repeated voplica.types.ai.training.ModelTrainingJob model_training_jobs = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+service TrainingService {
+  rpc CreateModelTrainingJob (CreateModelTrainingJobRequest) returns (CreateModelTrainingJobResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelTrainingJob (GetModelTrainingJobRequest) returns (GetModelTrainingJobResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Creates a `ModelVariant` from a saved training checkpoint. Used for jobs that had no
+  // `output_model_id` (so no variants were created during training), or to publish an
+  // additional checkpoint as a variant.
+  rpc CreateModelVariantFromTrainingCheckpoint (CreateModelVariantFromTrainingCheckpointRequest) returns (CreateModelVariantFromTrainingCheckpointResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Appends a dataset selection to `training_config.training_datasets`.
+  rpc AttachModelTrainingJobDataset (AttachModelTrainingJobDatasetRequest) returns (AttachModelTrainingJobDatasetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Removes a dataset selection from `training_config.training_datasets`.
+  rpc DetachModelTrainingJobDataset (DetachModelTrainingJobDatasetRequest) returns (DetachModelTrainingJobDatasetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListModelTrainingJobDatasets (ListModelTrainingJobDatasetsRequest) returns (ListModelTrainingJobDatasetsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Lists the CALLER's own training jobs that selected the given source dataset (useful for
+  // showing "my trainings that used this dataset"). Requires auth and never returns other
+  // users' jobs - the public aggregate usage is `Dataset.used_count`.
+  rpc ListDatasetTrainingJobs (ListDatasetTrainingJobsRequest) returns (ListDatasetTrainingJobsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Lists the CALLER's own training jobs across ALL their models/datasets (the global
+  // "my trainings" view: active + past in one place). Never returns other users' jobs.
+  // The status filter ORs multiple values (active = [PENDING, RUNNING]).
+  rpc ListModelTrainingJobs (ListModelTrainingJobsRequest) returns (ListModelTrainingJobsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Triggers current model sampling (outside the configured epoch/steps gap).
+  rpc SampleNowModelTrainingJob (SampleNowModelTrainingJobRequest) returns (SampleNowModelTrainingJobResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Triggers current model saving (regardless of being mid-epoch).
+  rpc SaveNowModelTrainingJobModelVariant (SaveNowModelTrainingJobModelVariantRequest) returns (SaveNowModelTrainingJobModelVariantResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateModelTrainingJob (UpdateModelTrainingJobRequest) returns (UpdateModelTrainingJobResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc StartModelTrainingJob (StartModelTrainingJobRequest) returns (StartModelTrainingJobResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc CancelModelTrainingJob (CancelModelTrainingJobRequest) returns (CancelModelTrainingJobResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelTrainingSamplesGroup (GetModelTrainingSamplesGroupRequest) returns (GetModelTrainingSamplesGroupResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelTrainingSample (GetModelTrainingSampleRequest) returns (GetModelTrainingSampleResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListModelTrainingSampleGroups (ListModelTrainingSampleGroupsRequest) returns (ListModelTrainingSampleGroupsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelTrainingRun (GetModelTrainingRunRequest) returns (GetModelTrainingRunResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListModelTrainingRuns (ListModelTrainingRunsRequest) returns (ListModelTrainingRunsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelTrainingCheckpoint (GetModelTrainingCheckpointRequest) returns (GetModelTrainingCheckpointResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListModelTrainingCheckpoints (ListModelTrainingCheckpointsRequest) returns (ListModelTrainingCheckpointsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListModelTrainingMetricsPoints (ListModelTrainingMetricsPointsRequest) returns (ListModelTrainingMetricsPointsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListModelTrainingRunDatasets (ListModelTrainingRunDatasetsRequest) returns (ListModelTrainingRunDatasetsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+}

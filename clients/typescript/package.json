@@ -1,0 +1,50 @@
+{
+  "name": "@voplica/connect",
+  "version": "0.0.0",
+  "description": "The Voplica API for TypeScript: every message, enum and service of the public protobuf definitions, for Connect clients in Node and bundlers.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voplica/api.git",
+    "directory": "clients/typescript"
+  },
+  "homepage": "https://docs.voplica.com/clients/",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "generate": "buf generate --template buf.gen.yaml",
+    "barrel": "node scripts/barrel.mjs",
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test \"test/*.test.mjs\"",
+    "prepublishOnly": "npm run generate && npm run barrel && npm run build && npm test"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.12.1",
+    "@connectrpc/connect": "^2.1.2"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "1.71.0",
+    "@bufbuild/protoc-gen-es": "2.12.1",
+    "@connectrpc/connect-node": "2.1.2",
+    "typescript": "5.9.3"
+  }
+}

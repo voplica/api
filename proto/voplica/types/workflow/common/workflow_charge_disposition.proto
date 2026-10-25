@@ -1,0 +1,27 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.workflow.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.workflow.common";
+option go_package = "voplica.com/types/workflow/common";
+option csharp_namespace = "Voplica.Types.Workflow.Common";
+
+enum WorkflowChargeDisposition {
+  WORKFLOW_CHARGE_DISPOSITION_UNSPECIFIED = 0;
+  // The step's charges stand: a user-caused, provider-billed or unknown failure class, or nothing keyed to
+  // this step to reverse.
+  WORKFLOW_CHARGE_DISPOSITION_CHARGED = 1;
+  // A platform failure class: the step's charges were reversed (credits_reversed_milli).
+  WORKFLOW_CHARGE_DISPOSITION_REVERSED = 2;
+  // The same decision recorded while nothing moves (the switch in LOG_ONLY): credits_reversed_milli is what
+  // WOULD have been reversed and is never money returned.
+  WORKFLOW_CHARGE_DISPOSITION_WOULD_REVERSE = 3;
+  // A reversal was decided and payments did not apply it (refused, unavailable, or a payments without the
+  // rpc): the step's charges stand.
+  WORKFLOW_CHARGE_DISPOSITION_NOT_APPLIED = 4;
+}

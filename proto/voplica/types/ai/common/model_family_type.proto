@@ -1,0 +1,87 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.common";
+option go_package = "voplica.com/types/ai/common";
+option csharp_namespace = "Voplica.Types.Ai.Common";
+import "voplica/types/base/file_type.proto";
+import "voplica/types/ai/common/generation_mode.proto";
+import "voplica/types/ai/common/inference_mode.proto";
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.EnumValueOptions {
+  optional ModelFamilyExtension model_family_extension = 50141;
+}
+
+message ModelFamilyExtension {
+  string label = 1;
+  repeated voplica.types.base.FileType possible_outputs = 2;
+  repeated ModelFamily lora_compatibility = 3;
+  repeated GenerationMode generation_modes = 4;
+  bool controlnet = 5;
+  bool differential_diffusion = 6;
+  // True when the family consumes reference images (identity/context conditioning).
+  bool reference_images = 7;
+  bool reference_images_on_inpaint = 8;
+  optional bool hosted = 9;
+  bool third_party = 10;
+  // The diffusers slots a SERVED pipeline of this family needs. Empty for provider-backed
+  // families (nothing of ours ever loads their weights). A variant whose imported file set does
+  // not cover every slot is still valid: the missing components come from the donor
+  // (based_on_model_variant_id) and the verification report names them in donor_components.
+  repeated string component_slots = 11;
+  bool gguf_single_file = 12;
+  bool video_part_refine = 13;
+  repeated InferenceMode inference_modes = 14;
+}
+
+enum ModelFamily {
+  MODEL_FAMILY_UNSPECIFIED = 0 [(model_family_extension) = { label: "unspecified" }];
+  SDXL = 1 [(model_family_extension) = { label: "SDXL", possible_outputs: [IMAGE_FILE], lora_compatibility: [SDXL], controlnet: True, differential_diffusion: True, generation_modes: [T2I, I2I_INPAINT], component_slots: ["unet", "vae", "text_encoder", "text_encoder_2"], inference_modes: [BALANCED] }];
+  FLUX_1_DEV = 2 [(model_family_extension) = { label: "FLUX_1_DEV", possible_outputs: [IMAGE_FILE], lora_compatibility: [FLUX_1_DEV], controlnet: True, differential_diffusion: True, generation_modes: [T2I, I2I_INPAINT], component_slots: ["transformer", "vae", "text_encoder", "text_encoder_2"], gguf_single_file: True, inference_modes: [BALANCED] }];
+  Z_IMAGE_TURBO = 3 [(model_family_extension) = { label: "Z_IMAGE_TURBO", possible_outputs: [IMAGE_FILE], lora_compatibility: [Z_IMAGE_BASE, Z_IMAGE_TURBO], controlnet: True, differential_diffusion: True, generation_modes: [T2I, I2I_INPAINT], component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED] }];
+  Z_IMAGE_BASE = 4 [(model_family_extension) = { label: "Z_IMAGE_BASE", possible_outputs: [IMAGE_FILE], lora_compatibility: [Z_IMAGE_BASE, Z_IMAGE_TURBO], controlnet: True, differential_diffusion: True, generation_modes: [T2I, I2I_INPAINT], component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED] }];
+  FLUX_2_KLEIN_9B = 5 [(model_family_extension) = { label: "FLUX_2_KLEIN_9B", possible_outputs: [IMAGE_FILE], lora_compatibility: [FLUX_2_KLEIN_9B, FLUX_2_KLEIN_BASE_9B], controlnet: False, differential_diffusion: True, generation_modes: [T2I, I2I_INPAINT, I2I_EDIT], reference_images: True, reference_images_on_inpaint: True, component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED] }];
+  WAN_2_2_T2V_A14B = 6 [(model_family_extension) = { label: "WAN_2_2_T2V_A14B", possible_outputs: [VIDEO_FILE], lora_compatibility: [WAN_2_2_T2V_A14B, WAN_2_2_I2V_A14B], controlnet: False, differential_diffusion: False, generation_modes: [T2V], component_slots: ["transformer", "transformer_2", "vae", "text_encoder"], inference_modes: [BALANCED] }];
+  WAN_2_2_I2V_A14B = 7 [(model_family_extension) = { label: "WAN_2_2_I2V_A14B", possible_outputs: [VIDEO_FILE], lora_compatibility: [WAN_2_2_T2V_A14B, WAN_2_2_I2V_A14B], controlnet: False, differential_diffusion: False, generation_modes: [I2V], component_slots: ["transformer", "transformer_2", "vae", "text_encoder"], inference_modes: [BALANCED] }];
+  LTX_2_2 = 8 [(model_family_extension) = { label: "LTX_2_2", possible_outputs: [VIDEO_FILE], lora_compatibility: [LTX_2_2], controlnet: False, differential_diffusion: False, generation_modes: [T2V, I2V], component_slots: ["transformer", "vae", "text_encoder", "vocoder"], gguf_single_file: True, inference_modes: [BALANCED] }];
+  LTX_2_3 = 9 [(model_family_extension) = { label: "LTX_2_3", possible_outputs: [VIDEO_FILE], lora_compatibility: [LTX_2_3], controlnet: False, differential_diffusion: False, generation_modes: [T2V, I2V], component_slots: ["transformer", "vae", "text_encoder", "vocoder"], gguf_single_file: True, inference_modes: [BALANCED, ORIGINAL] }];
+  WAN_2_2_S2V_14B = 10 [(model_family_extension) = { label: "WAN_2_2_S2V_14B", possible_outputs: [VIDEO_FILE], lora_compatibility: [], controlnet: False, differential_diffusion: False, generation_modes: [S2V], component_slots: ["transformer", "vae", "text_encoder", "audio_encoder"], inference_modes: [BALANCED] }];
+  QWEN_IMAGE_EDIT_2511 = 11 [(model_family_extension) = { label: "QWEN_IMAGE_EDIT_2511", possible_outputs: [IMAGE_FILE], lora_compatibility: [QWEN_IMAGE_EDIT_2511, QWEN_IMAGE_2512], controlnet: False, differential_diffusion: False, generation_modes: [T2I, I2I_INPAINT, I2I_EDIT], reference_images: True, reference_images_on_inpaint: True, component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED, ORIGINAL] }];
+  // Krea 2: image family with reference-image conditioning (identity/context)
+  // alongside text-to-image and image editing. differential_diffusion: the platform
+  // refine encodes per-region strength as a soft differential change-map; KREA_2
+  // serves it on Krea2InpaintPipeline's threshold engine (the soft mask drives
+  // per-pixel exit steps), with the service normalizing the differential map
+  // convention (white = preserve) onto the pipeline's inpaint convention
+  // (white = regenerate) at the boundary.
+  KREA_2 = 12 [(model_family_extension) = { label: "Krea 2", possible_outputs: [IMAGE_FILE], lora_compatibility: [KREA_2], controlnet: False, differential_diffusion: True, generation_modes: [T2I, I2I_INPAINT, I2I_EDIT], reference_images: True, reference_images_on_inpaint: True, component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED] }];
+  // LTX 2.5: the next LTX video generation (LTX_2_3's successor — same two-stage
+  // latent-upsampling shape, same distilled/SFT split). Video-only family.
+  LTX_2_5 = 13 [(model_family_extension) = { label: "LTX 2.5", possible_outputs: [VIDEO_FILE], lora_compatibility: [LTX_2_5], generation_modes: [T2V, I2V], component_slots: ["transformer", "vae", "text_encoder", "vocoder"], gguf_single_file: True, inference_modes: [BALANCED] }];
+  // MiniMax H3: video family with reference conditioning. The FIRST family to declare
+  // V2V — its references channel takes whole videos (frames + fps + their own soundtrack)
+  // as semantic conditioning rather than as a restyle source with bound geometry.
+  MINIMAX_H3 = 14 [(model_family_extension) = { label: "MiniMax H3", possible_outputs: [VIDEO_FILE], lora_compatibility: [MINIMAX_H3], generation_modes: [T2V, I2V, V2V], component_slots: ["transformer", "transformer_ref", "text_encoder", "vae", "audio_vae"], gguf_single_file: True, video_part_refine: True, inference_modes: [FAST, BALANCED, ORIGINAL] }];
+  // MiniMax Music 3: the platform's FIRST `possible_outputs: [AUDIO_FILE]` family, and the
+  // only consumer of the new T2A mode — a prompt (plus optional lyrics) renders a music
+  // track. No LoRA compatibility is declared: nothing trains adapters for this family today,
+  // and an absent list is what the resolver reads as "no combinable adapter exists"
+  // (`WAN_2_2_S2V_14B`'s explicit `[]` says the same thing in one more character).
+  MINIMAX_MUSIC_3 = 15 [(model_family_extension) = { label: "MiniMax Music 3", possible_outputs: [AUDIO_FILE], generation_modes: [T2A] }];
+  SEEDANCE_2_5 = 16 [(model_family_extension) = { label: "Seedance 2.5", possible_outputs: [VIDEO_FILE], generation_modes: [T2V, I2V, V2V], hosted: False, third_party: True }];
+  NANO_BANANA_PRO = 17 [(model_family_extension) = { label: "Nano Banana Pro", possible_outputs: [IMAGE_FILE], generation_modes: [T2I, I2I_EDIT], reference_images: True, hosted: False, third_party: True }];
+  NANO_BANANA_2 = 18 [(model_family_extension) = { label: "Nano Banana 2", possible_outputs: [IMAGE_FILE], generation_modes: [T2I, I2I_EDIT], reference_images: True, hosted: False, third_party: True }];
+  QWEN_IMAGE_2512 = 19 [(model_family_extension) = { label: "QWEN_IMAGE_2512", possible_outputs: [IMAGE_FILE], lora_compatibility: [QWEN_IMAGE_2512, QWEN_IMAGE_EDIT_2511], controlnet: False, differential_diffusion: False, generation_modes: [T2I, I2I_INPAINT], component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED, ORIGINAL] }];
+  FLUX_2_KLEIN_BASE_9B = 20 [(model_family_extension) = { label: "FLUX_2_KLEIN_BASE_9B", possible_outputs: [IMAGE_FILE], lora_compatibility: [FLUX_2_KLEIN_9B, FLUX_2_KLEIN_BASE_9B], controlnet: False, differential_diffusion: True, generation_modes: [T2I, I2I_INPAINT, I2I_EDIT], reference_images: True, reference_images_on_inpaint: True, component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED] }];
+  QWEN_IMAGE_2_1 = 21 [(model_family_extension) = { label: "QWEN_IMAGE_2_1", possible_outputs: [IMAGE_FILE], lora_compatibility: [QWEN_IMAGE_2_1], controlnet: False, differential_diffusion: False, generation_modes: [T2I, I2I_INPAINT, I2I_EDIT], reference_images: True, reference_images_on_inpaint: True, component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED] }];
+  WAN_3_0 = 22 [(model_family_extension) = { label: "WAN 3.0", possible_outputs: [VIDEO_FILE], generation_modes: [T2V, I2V], hosted: False, third_party: True }];
+  WAN_3_0_PRIME = 23 [(model_family_extension) = { label: "WAN 3.0 Prime", possible_outputs: [VIDEO_FILE], generation_modes: [T2V, I2V], hosted: False, third_party: True }];
+  FLUX_3_KLEIN = 24 [(model_family_extension) = { label: "FLUX_3_KLEIN", possible_outputs: [IMAGE_FILE], lora_compatibility: [FLUX_3_KLEIN, FLUX_3_KLEIN_BASE], controlnet: False, differential_diffusion: False, generation_modes: [T2I, I2I_EDIT], reference_images: True, component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED, FAST] }];
+  FLUX_3_KLEIN_BASE = 25 [(model_family_extension) = { label: "FLUX_3_KLEIN_BASE", possible_outputs: [IMAGE_FILE], lora_compatibility: [FLUX_3_KLEIN, FLUX_3_KLEIN_BASE], controlnet: False, differential_diffusion: False, generation_modes: [T2I, I2I_EDIT], reference_images: True, component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED] }];
+}

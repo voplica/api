@@ -1,0 +1,31 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.file.codec.profile;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.file.codec.profile";
+option go_package = "voplica.com/types/file/codec/profile";
+option csharp_namespace = "Voplica.Types.File.Codec.Profile";
+import "google/protobuf/descriptor.proto";
+import "voplica/types/file/codec/audio_codec.proto";
+extend google.protobuf.EnumValueOptions {
+  optional AudioCodecProfileExtension audio_codec_profile_extension = 50123;
+}
+
+message AudioCodecProfileExtension {
+  string name = 1;
+  AudioCodecType codec = 2;
+}
+
+enum AudioCodecProfileType {
+  AUDIO_CODEC_PROFILE_TYPE_UNSPECIFIED = 0 [(audio_codec_profile_extension) = { name: "unspecified", codec: AUDIO_CODEC_TYPE_UNSPECIFIED }];
+  /**
+  AAC
+  */
+  AAC_1 = 100 [(audio_codec_profile_extension) = { name: "1", codec: AUDIO_CODEC_AAC }];
+  AAC_2 = 101 [(audio_codec_profile_extension) = { name: "2", codec: AUDIO_CODEC_AAC }];
+}

@@ -1,0 +1,565 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.training;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.training";
+option go_package = "voplica.com/types/ai/training";
+option csharp_namespace = "Voplica.Types.Ai.Training";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/image/image_size.proto";
+import "voplica/types/ai/common/subject_category.proto";
+import "voplica/types/ai/common/d_type.proto";
+import "voplica/types/ai/common/model_type.proto";
+import "voplica/types/ai/common/model_family_type.proto";
+import "voplica/types/ai/common/training_lr_scheduler.proto";
+import "voplica/types/ai/common/training_noise_scheduler.proto";
+import "voplica/types/ai/common/training_optimizer.proto";
+import "voplica/types/ai/common/training_loss_type.proto";
+import "voplica/types/ai/common/training_timestep_sampling.proto";
+import "voplica/types/ai/dataset/dataset_preparation.proto";
+import "voplica/types/ai/training/ema.proto";
+import "voplica/types/file/files.proto";
+
+// A `ModelTrainingJob` is the user-facing handle for a single training initiative.
+// Its dataset selections, hyperparameters, sampling settings, and saving settings live
+// inside `training_config`, which is the only authoritative source of those values.
+// The job may be (re)started multiple times producing one `ModelTrainingRun` (and one
+// workflow execution) per start.
+//
+// To inspect produced artifacts, callers list the job's checkpoints
+// (`ListModelTrainingCheckpoints`, limit 1, descending) and read the most recent one - the
+// job intentionally does NOT denormalize "latest variant" / "latest checkpoint" pointers,
+// which avoids write-time invariants and staleness bugs. A checkpoint may or may not be
+// attached to a `ModelVariant` (see `output_model_id`).
+message ModelTrainingJob {
+  string id = 1;
+  // Seconds since epoch.
+  uint64 created_at = 2;
+  string owner_id = 3;
+  voplica.types.base.VisibilityType search_and_use_visibility_type = 4;
+  // Authoritative training configuration. Dataset selections live in
+  // `training_config.training_datasets`.
+  ModelTrainingConfig training_config = 5;
+  voplica.types.base.JobStatus status = 6;
+  // Workflow execution id of the current run (when status is RUNNING/CANCELLING) or of
+  // the most recent run. May be empty if the job has never been started.
+  optional string current_workflow_execution_id = 7;
+  // Error/diagnostic message for the most recent run.
+  optional string job_message = 8;
+  ModelTrainingJobStats stats = 9;
+  // Optional destination `GenModel` for produced checkpoints.
+  //   - When set: every checkpoint saved by the worker also creates a new `ModelVariant`
+  //     under this model, and `ModelTrainingCheckpoint.model_variant_id` is populated.
+  //   - When empty: checkpoints are stored against the training job only (no model variants
+  //     are created). The user can later publish any checkpoint as a variant via
+  //     `CreateModelVariantFromTrainingCheckpoint`.
+  // Independent of `training_config.base_model_variant_id` (the weights to train on) and
+  // `training_config.continue_training` (the checkpoint to continue from).
+  optional string output_model_id = 10;
+  // Persisted training run row id of the current/most recent run. Use
+  // `GetModelTrainingRun` (or `ListModelTrainingRuns` filtered by `model_training_job_id`)
+  // to fetch the full run record.
+  optional string current_run_id = 11;
+}
+
+message ModelTrainingConfig {
+  // Base model family which the trained model targets. Combined with `model_type` defines
+  // the architecture of the produced variants.
+  voplica.types.ai.common.ModelFamily model_family = 1;
+  // Model VARIANT whose weights are used as the base for training/fine-tuning. Omitted
+  // when training a model from scratch (only `model_family`/`model_type` define
+  // architecture in that case). This selects the weights to train ON; it is distinct from
+  // `ModelTrainingJob.output_model_id` (where produced variants are saved).
+  // Reproducibility relies on model-variant weight FILES being immutable once verified -
+  // replacing a variant's files in place would silently change what "the same base" means
+  // for past runs.
+  optional string base_model_variant_id = 2;
+  // Destination model type (i.e. what kind of model are we training: full checkpoint,
+  // LoRA, ControlNet, etc.).
+  voplica.types.ai.common.ModelType model_type = 3;
+  // Optionally continue training instead of starting from scratch. Continuation does NOT
+  // affect dataset preparation - the same recipe and prepared snapshot can be reused.
+  optional ModelTrainingContinueFrom continue_training = 4;
+  ModelTrainingParams training_params = 5;
+  // When to stop training. If unset, the trainer stops based on `training_params`.
+  ModelTrainingStopTrigger stop_trigger = 6;
+  ModelSamplingParams sampling_params = 7;
+  ModelSavingParams saving_params = 8;
+  // Informational hint for the trainer (character, style, object, etc.).
+  voplica.types.ai.common.SubjectCategory training_category = 9;
+  // Dataset selections consumed by the trainer. Authoritative for the training run.
+  // Each entry references either an existing preparation snapshot or a recipe that the
+  // workflow will resolve into a snapshot at start time.
+  repeated ModelTrainingDataset training_datasets = 10;
+  // Optional dataset policy that controls auto-preparation and partial-dataset behavior.
+  ModelTrainingDataPolicy data_policy = 11;
+}
+
+message ModelTrainingContinueFrom {
+  oneof continue_from {
+    // Loads only the weights of the model variant to continue training. Optimizer,
+    // scheduler, tokenizer state are NOT restored. Use lower initial learning rate.
+    string model_variant_id = 1;
+    // Loads weights plus optimizer, scheduler, and any other metadata needed to continue
+    // training, when the trainer can verify the metadata is compatible. Falls back to
+    // weights-only restoration otherwise.
+    string trained_model_checkpoint_id = 2;
+  }
+}
+
+// One dataset selection for a training run: WHICH frozen training examples the run consumes.
+//
+// A selection references prepared data (pinned snapshot | live preparation | recipe) and
+// FILTERS the snapshot's items by `categories` / `target_keys` / `subject_ids` /
+// `source_asset_ids`. Because items own their captions, there is no separate caption source:
+// `caption_format` picks WHICH of each item's captions the trainer loads (UNSPECIFIED =
+// train caption-less), and per-selection `trigger_words` are prepended at load time.
+//
+// The character pattern: two jobs on the same dataset - one selecting
+// categories=[CHARACTER_GENERIC] (full-body LoRA), one categories=[CHARACTER_FACE] (face
+// LoRA) - both resolving to the SAME preparation snapshot, filtered differently.
+message ModelTrainingDataset {
+  string source_dataset_id = 1;
+  // Prepared data for this selection - three ways to pick it:
+  //   - PINNED frozen snapshot (`preparation_snapshot_id`) - exact reproduction of a past version.
+  //   - LATEST of an existing preparation (`preparation_id`) - freeze its CURRENT version now.
+  //   - PREPARE via a recipe (`recipe_selection`) - find-or-create the preparation + (auto-)prepare.
+  oneof selection {
+    // PINNED: use the given `DatasetPreparationSnapshot` as-is. Resolution fails if the
+    // snapshot lacks any `required_file_kinds` or (when `require_captions`) `caption_format`.
+    string preparation_snapshot_id = 2;
+    ModelTrainingDatasetRecipeSelection recipe_selection = 3;
+    string preparation_id = 12;
+  }
+  // Formerly the per-selection caption source arms (captions moved onto prepared items).
+  reserved 5, 11;
+  // Optional subset of source assets to include. Empty means "all current source assets".
+  repeated string source_asset_ids = 4;
+  // 0 means default weight 1.0.
+  double sampling_weight = 6;
+  // 0 means default repeats 1.
+  uint32 repeats = 7;
+  // Required file kinds per item. Typically `[TRAINING_SAMPLE]`, plus `MASK` for masked
+  // training. Resolution fails when the snapshot lacks any of them for the selected items.
+  repeated voplica.types.ai.dataset.PreparedFileKind required_file_kinds = 8;
+  // Recipe target variants this selection trains on (for example ["face_1024_square"]).
+  // Empty means "no target constraint". Composes with `categories` as independent AND
+  // filters - categories are the semantic pick (face vs full-body), target_keys the precise
+  // structural one (face_1024 vs face_512).
+  repeated string target_keys = 13;
+  // Semantic filter: only items whose target `category` is listed (e.g. [CHARACTER_FACE]
+  // for a face LoRA). Empty means "no category constraint".
+  repeated voplica.types.ai.common.SubjectCategory categories = 16;
+  // Identity filter: only items of these `DatasetSubject`s (e.g. [anna_subject_id] so a
+  // group photo contributes only Anna's crops). Empty means "no subject constraint";
+  // when set, subjectless (whole-image) items are excluded.
+  repeated string subject_ids = 17;
+  // WHICH caption each item contributes: the trainer loads this format's text from the
+  // frozen item (+ `trigger_words`). UNSPECIFIED = train caption-less (trigger words only,
+  // if any) - the STYLE fast lane.
+  voplica.types.ai.dataset.DatasetCaptionFormat caption_format = 14;
+  // When true, resolution fails (FAILED_PRECONDITION) if any selected item lacks a
+  // `caption_format` caption; when false, such items train caption-less.
+  bool require_captions = 15;
+  // Optional human-friendly subset name (for trainers that group items into subsets).
+  optional string subset_name = 9;
+  // Trigger words prepended to every loaded caption for THIS selection at training time
+  // (for example ["ohwx"]). They are deliberately NOT part of the dataset or its captions, so
+  // the same data can train models with and without triggers, and different selections in one
+  // job can carry different triggers. Excluded from `data_selection_fingerprint`.
+  repeated string trigger_words = 10;
+  // VIDEO selections only: temporal loader knobs for this selection (ignored for image
+  // selections). Per-selection - NOT job-level - because one multi-dataset job routinely
+  // mixes an IMAGE identity dataset with a VIDEO motion dataset for the same character
+  // LoRA, and a job-level knob cannot express that. Unset = trainer defaults for the
+  // model family.
+  optional ModelTrainingDatasetVideoParams video_params = 18;
+  // INTENT identity of this selection: a stable hash over the selection AS SPECIFIED -
+  // `source_dataset_id`, the literal `selection` arm (pinned snapshot id | preparation id |
+  // recipe fingerprint + reuse policy), `source_asset_ids`, `target_keys`, `categories`,
+  // `subject_ids`, `caption_format`, `require_captions`, `required_file_kinds`,
+  // `sampling_weight`, `repeats`, `subset_name`, and `video_params` (contributing ONLY
+  // WHEN SET - the canonical payload omits unset fields, so pre-video fingerprints do not
+  // rotate). Computable at attach time (before any resolution) and stable across
+  // preparation/caption edits, so it serves as the dedup/detach key for job selections.
+  // The RESOLVED identity of what a run actually trained on lives on
+  // `ResolvedModelTrainingDataset.resolved_selection_fingerprint`. Training hyperparameters
+  // AND `trigger_words` are intentionally excluded (trigger words are a training-time
+  // caption transform, not part of the selected data).
+  string data_selection_fingerprint = 20;
+}
+
+// Temporal loader knobs for ONE video dataset selection. Maps 1:1 onto the trainer's
+// (ai-toolkit) video dataset options; the trainer derives family defaults when unset
+// (e.g. WAN ~33 frames @ 16 fps; LTX ~121 frames @ 25 fps honoring (frames - 1) % 8 == 0).
+message ModelTrainingDatasetVideoParams {
+  // Frames sampled per training clip. 0 = trainer default for the model family.
+  uint32 num_frames = 1;
+  // Sampling fps used when a clip is longer than `num_frames` requires and
+  // `shrink_video_to_frames` is false. 0 = trainer default.
+  uint32 fps = 2;
+  // When true (the default when unset), each clip is shrunk/stretched temporally to exactly
+  // `num_frames` instead of being sampled at `fps`.
+  optional bool shrink_video_to_frames = 3;
+  // Train image-to-video conditioning (first-frame conditioning). Unset = family-derived
+  // default (true for I2V architectures).
+  optional bool do_i2v = 4;
+  // Train the audio head from the clips' muxed audio (audio-capable families only, e.g.
+  // LTX-2). Unset = false.
+  optional bool do_audio = 5;
+}
+
+message ModelTrainingDatasetRecipeSelection {
+  oneof recipe_ref {
+    // Persistent recipe id.
+    string recipe_id = 1;
+    // Ad-hoc recipe payload.
+    voplica.types.ai.dataset.DatasetPreparationRecipe recipe = 2;
+  }
+  voplica.types.ai.dataset.DatasetPreparationReusePolicy reuse_policy = 3;
+}
+
+message ModelTrainingDataPolicy {
+  // Read when `StartModelTrainingJob` plans the run. If true and some selected assets still miss items, files or
+  // caption formats (including assets that need subject discovery first), the service starts a combined run that
+  // discovers, prepares and captions the missing pieces, then trains. If false and anything required is missing,
+  // `StartModelTrainingJob` fails with FAILED_PRECONDITION.
+  bool auto_prepare_missing_items = 1;
+  // If true, resolution fails when any selected source asset could not be prepared.
+  bool fail_on_partial_dataset = 2;
+  // Minimum total training items (after filters) required before training can start.
+  // 0 means no minimum. Enforced at snapshot-resolution time.
+  uint32 min_training_items = 3;
+}
+
+message ModelTrainingParams {
+  oneof params {
+    // Standard hyperparameter set used by image / video / audio diffusion trainers
+    // (FLUX, SDXL, Z_IMAGE, WAN, LTX, etc.).
+    StandardTrainingParams standard_training_params = 1;
+  }
+}
+
+message ModelSamplingParams {
+  // `last_sample_requested_timestamp` indicates the user requested a sample manually.
+  // Samples are normally generated automatically on the trainer's own cadence (typically a
+  // step-count threshold - per-EPOCH cadence is NOT guaranteed; e.g. ai-toolkit samples by
+  // steps); users may request samples in between. If
+  // `last_sample_requested_timestamp > last_sample_generated_timestamp` the
+  // training worker knows to generate a sample as soon as possible.
+  // Services should rate-limit manual requests (recommended: at most once per 15 minutes).
+  uint64 last_sample_requested_timestamp = 1;
+  uint64 last_sample_generated_timestamp = 2;
+  // Samples to execute when sampling is triggered.
+  repeated ModelTrainingSampleConfig samples = 3;
+  // When true, also run samples after each checkpoint save.
+  bool sample_after_save = 4;
+  // 0 means no additional samples. >0 means sample every N training steps.
+  uint64 steps_sample_threshold = 5;
+}
+
+message ModelTrainingSampleConfig {
+  string prompt = 1;
+  int32 seed = 2;
+  // Extension: future content modalities are added as new oneof arms with tags >= 14.
+  oneof params {
+    ModelTrainingImageSampleParams image = 10;
+    ModelTrainingVideoSampleParams video = 11;
+    ModelTrainingAudioSampleParams audio = 12;
+    ModelTrainingModel3DSampleParams model_3d = 13;
+  }
+}
+
+message ModelTrainingImageSampleParams {
+  voplica.types.image.ImageSize resolution = 1;
+  // Negative prompt. Usually empty for CFG-distilled families such as FLUX.
+  optional string negative_prompt = 2;
+  // Classifier-free guidance scale. 0 means "trainer default for the family"
+  // (for example ~4.0 for FLUX, ~7.0 for SDXL).
+  float guidance_scale = 3;
+  // Number of inference steps for the sample. 0 means "trainer default".
+  uint32 sample_steps = 4;
+  // Inference sampler/scheduler name (for example "flowmatch", "euler", "dpmpp_2m"). Empty
+  // means "trainer default for the family".
+  optional string sampler = 5;
+  // When true, advance the seed per prompt so each sample prompt uses a distinct seed
+  // (ai-toolkit `walk_seed`).
+  bool walk_seed = 6;
+}
+
+message ModelTrainingVideoSampleParams {
+  voplica.types.image.ImageSize resolution = 1;
+  // Duration of the produced video sample in milliseconds.
+  uint64 length_ms = 2;
+  // Frames per second.
+  uint32 fps = 3;
+  optional string negative_prompt = 4;
+  // 0 means "trainer default for the family".
+  float guidance_scale = 5;
+  // 0 means "trainer default".
+  uint32 sample_steps = 6;
+  optional string sampler = 7;
+  bool walk_seed = 8;
+}
+
+message ModelTrainingAudioSampleParams {
+  // Sample length in milliseconds.
+  uint64 length_ms = 1;
+  // Sample rate (Hz).
+  uint32 sample_rate = 2;
+}
+
+message ModelTrainingModel3DSampleParams {
+  // Target polygon count for the rendered preview mesh.
+  uint32 target_polygon_count = 1;
+  // Optional render resolution for a preview image of the produced model.
+  optional voplica.types.image.ImageSize preview_render_resolution = 2;
+}
+
+message ModelTrainingSamplesGroup {
+  string samples_group_id = 1;
+  uint64 samples_time = 2;
+  // Training step at which the samples group was produced.
+  uint64 step = 3;
+  repeated ModelTrainingSample samples = 4;
+  // Variant id of the model saved at the time these samples were generated, if any
+  // (typically populated when `sample_after_save` triggered the sampling).
+  optional string model_variant_id = 5;
+  string model_training_job_id = 6;
+  // The run that produced these samples.
+  string model_training_run_id = 7;
+  // Optional checkpoint reference when samples were produced alongside a saved checkpoint.
+  optional string checkpoint_id = 8;
+}
+
+message ModelTrainingSample {
+  string sample_id = 1;
+  ModelTrainingSampleConfig sample_config = 2;
+  voplica.types.file.AssetFileVariantGroups asset = 3;
+}
+
+message ModelSavingParams {
+  // Save the model when training stops regardless of `steps_save_threshold`.
+  bool save_on_stop = 1;
+  // Checkpoint weight dtype. Quantization options may be added later.
+  voplica.types.ai.common.DType dtype = 2;
+  // Save the model every N training steps. 0 means do not save on a threshold.
+  uint64 steps_save_threshold = 3;
+  // Optional model name to embed in the trained model metadata.
+  optional string model_name = 4;
+  uint64 last_save_requested_timestamp = 5;
+  uint64 last_save_completed_timestamp = 6;
+  uint32 max_step_saves_to_keep = 7;
+}
+
+message ModelTrainingJobStats {
+  // 0-based step counter within the current/most recent run.
+  uint64 current_step = 1;
+  // 0-based epoch counter, when the trainer reports epochs.
+  optional uint64 current_epoch = 2;
+  // Target total steps for the current/most recent run (mirrors
+  // `StandardTrainingParams.total_steps`).
+  optional uint64 total_steps = 3;
+  // Duration of the most recent training step in milliseconds.
+  optional uint64 last_step_duration_ms = 4;
+  // Rolling average step duration in milliseconds (window defined by the worker).
+  optional uint64 average_step_duration_ms = 5;
+  // Estimated time-to-finish for the current run, in seconds.
+  optional uint64 estimated_time_to_finish_seconds = 6;
+  // Latest snapshot of key training metrics (loss, learning rate, eval loss, etc.).
+  optional ModelTrainingMetricsSnapshot latest_metrics = 7;
+  // Timestamp of the last stats update (milliseconds since epoch).
+  optional uint64 stats_updated_at = 8;
+}
+
+// Snapshot of training metrics at a specific step. Used as the "current" view embedded in
+// `ModelTrainingJobStats.latest_metrics` and inside `ModelTrainingCheckpoint.metrics_snapshot`.
+// Historical metric values are stored as `ModelTrainingMetricPoint` time series.
+message ModelTrainingMetricsSnapshot {
+  uint64 step = 1;
+  // Generic key->value map. Recommended keys (workers should use these when applicable):
+  //   "loss", "eval_loss", "unet_lr", "te_lr", "te_2_lr", "t5_lr",
+  //   "clip_score_mean", "clip_score_min", "clip_score_max",
+  //   "grad_norm", "grad_scale"
+  // Workers may add custom keys; the UI is metric-agnostic.
+  map<string, double> values = 2;
+  uint64 captured_at = 3;
+}
+
+message ModelTrainingMetricPoint {
+  string model_training_job_id = 1;
+  string model_training_run_id = 2;
+  uint64 step = 3;
+  string metric_key = 4;
+  double value = 5;
+  uint64 captured_at = 6;
+}
+
+// One saved training checkpoint. It always carries inference-ready weights (grouped under
+// `model_asset_id`) plus optional full state (weights + optimizer + scheduler + ...) needed
+// for `ModelTrainingContinueFrom.trained_model_checkpoint_id` continuation. The checkpoint
+// is attached to a `ModelVariant` (`model_variant_id`) only when the owning job had an
+// `output_model_id`; otherwise it stays unattached until the user calls
+// `CreateModelVariantFromTrainingCheckpoint`.
+message ModelTrainingCheckpoint {
+  string id = 1;
+  string model_training_job_id = 2;
+  string model_training_run_id = 3;
+  // Training step at which the checkpoint was saved.
+  uint64 step = 4;
+  // Seconds since epoch.
+  uint64 created_at = 5;
+  // Asset grouping the inference-ready weight files of this checkpoint. Always populated,
+  // so a `ModelVariant` can be created from this checkpoint at any time.
+  string model_asset_id = 6;
+  // Model variant carrying the inference-ready weights. Populated only when the job had an
+  // `output_model_id` (or after `CreateModelVariantFromTrainingCheckpoint`). Suitable for
+  // `ModelTrainingContinueFrom.model_variant_id` continuation when present.
+  optional string model_variant_id = 7;
+  // Family/category of the produced weights, denormalized from the training config so a
+  // variant can be created later without re-reading the run.
+  voplica.types.ai.common.ModelFamily model_family = 8;
+  voplica.types.ai.common.SubjectCategory subject_category = 9;
+  // Full set of files comprising this checkpoint (weights, optimizer state, scheduler
+  // state, EMA buffers, RNG state, etc.). Required for
+  // `ModelTrainingContinueFrom.trained_model_checkpoint_id` continuation. May be empty
+  // when only inference weights were saved.
+  repeated voplica.types.file.FileInfo checkpoint_files = 10;
+  // Snapshot of training metrics at the time of saving.
+  optional ModelTrainingMetricsSnapshot metrics_snapshot = 11;
+  // Optional samples group id when samples were produced together with this checkpoint
+  // (typically when `sample_after_save = true`).
+  optional string samples_group_id = 12;
+  // Optional human-friendly name (for example "step_5000.safetensors").
+  optional string checkpoint_name = 13;
+  // Continuation lineage: the model variant this run continued from, if any (copied from
+  // `ModelTrainingContinueFrom.model_variant_id`).
+  optional string trained_from_model_variant_id = 14;
+  // Continuation lineage: the training checkpoint this run continued from, if any (copied
+  // from `ModelTrainingContinueFrom.trained_model_checkpoint_id`).
+  optional string trained_from_model_checkpoint_id = 15;
+}
+
+// One workflow execution of a training job. Stores the per-run snapshot of inputs
+// (training config, base model, continuation source) plus the worker-reported terminal
+// status, final stats, and total trained steps.
+message ModelTrainingRun {
+  string id = 1;
+  string model_training_job_id = 2;
+  optional string workflow_execution_id = 3;
+  // Seconds since epoch.
+  uint64 started_at = 4;
+  optional uint64 completed_at = 5;
+  voplica.types.base.JobStatus status = 6;
+  // Worker-provided detail for terminal states (typically an error or cancellation reason).
+  optional string message = 7;
+  // Resolved output `GenModel` id for this run. Empty when the job has no `output_model_id`
+  // (checkpoints are then stored against the job without creating model variants).
+  optional string output_model_id = 8;
+  // Snapshot of `ModelTrainingConfig` at run start. Subsequent edits to the job config do
+  // not affect this run.
+  ModelTrainingConfig training_config_snapshot = 9;
+  // Base model variant id from the snapshot (denormalized convenience copy of
+  // `training_config_snapshot.base_model_variant_id`).
+  optional string base_model_variant_id = 10;
+  // Continuation source from the snapshot (denormalized convenience copy of
+  // `training_config_snapshot.continue_training`).
+  optional ModelTrainingContinueFrom continue_from = 11;
+  // Latest stats snapshot for this run.
+  ModelTrainingJobStats latest_stats = 12;
+  // Total training steps executed during this run (may be < `total_steps` for cancelled
+  // or failed runs). To find produced checkpoints/variants, list this run's checkpoints
+  // (`ListModelTrainingCheckpoints` filtered by `model_training_run_id`).
+  uint64 trained_steps = 13;
+  // Root workflow execution that triggered this run. Equals `workflow_execution_id` for
+  // training-only runs. Different from `workflow_execution_id` when this run is the
+  // training-child inside a combined `ai.prepare_and_train_model_workflow` execution;
+  // in that case `root_workflow_execution_id` is the combined parent and is what
+  // `StartModelTrainingJobResponse.workflow_execution_id` returned to the caller, while
+  // `workflow_execution_id` is the inner training-only child execution.
+  // Always populated immediately when the run is created (before any workflow starts).
+  string root_workflow_execution_id = 14;
+}
+
+message ModelTrainingStopTrigger {
+  // 0 means no step limit. >0 means stop after the given number of trained steps.
+  uint64 after_trained_steps = 1;
+}
+
+message StandardTrainingParams {
+  // Max trained steps. Usually calculated as `epochs * images_count * repeats / batch_size`.
+  // Training may stop earlier according to `ModelTrainingStopTrigger`.
+  uint64 total_steps = 1;
+  // Items trained in parallel (the number of items in VRAM simultaneously).
+  uint32 batch_size = 2;
+  // Training resolutions. ai-toolkit currently supports only square resolutions, while
+  // OneTrainer can support different aspect ratios.
+  // Resolutions belong to dataset preparation targets too - the trainer expects
+  // prepared artifacts at the resolutions defined by the recipe targets.
+  repeated voplica.types.image.ImageSize resolutions = 3;
+  bool enable_bucketing = 4;
+  int64 gradient_accumulation_steps = 5;
+  bool train_unet = 6;
+  bool train_text_encoder = 7;
+  bool gradient_checkpointing = 8;
+  // LEARNING RATE schedule (constant, cosine, cosine_with_restarts, ...). The diffusion
+  // NOISE scheduler is a separate field below (`noise_scheduler`).
+  voplica.types.ai.common.TrainingLrScheduler lr_scheduler = 9;
+  voplica.types.ai.common.TrainingOptimizer optimizer = 10;
+  // Typically default: 0.0005
+  double unet_lr = 11;
+  voplica.types.ai.common.DType dtype = 12;
+  optional bool linear_timesteps = 13;
+  voplica.types.ai.training.EMAConfig ema_config = 14;
+  // TRAINER-SUPPORT NOTE (fields 15-18): the current ai-toolkit SDTrainer exposes a single
+  // learning rate and no per-text-encoder controls; trainers that cannot honor these
+  // fields MUST record the fact in the run's registered stats/message rather than fail.
+  optional bool apply_t5_attn_mask = 15;
+  // Typically default: 0.00005
+  optional double text_encoder_1_lr = 16;
+  // Typically not trained.
+  optional double text_encoder_2_lr = 17;
+  optional bool train_t5 = 18;
+  // 1 - 256. Default: 32.
+  optional uint32 network_dim = 19;
+  // 1 - 256. Default: 16.
+  optional uint32 network_alpha = 20;
+  optional voplica.types.ai.common.TrainingTimestepSampling timestep_sampling = 21;
+  optional float discrete_flow_shift = 22;
+  optional int32 guidance_scale = 23;
+  // Trainers without a matching implementation (e.g. ai-toolkit has no HUBER/SMOOTH_L1)
+  // fall back to their default loss and record the substitution in the run stats/message.
+  optional voplica.types.ai.common.TrainingLossType loss_type = 24;
+  // 1 - 4. Default: 3. Consumed only by `TRAINING_LR_SCHEDULER_COSINE_WITH_RESTARTS`.
+  uint32 lr_scheduler_cycles = 25;
+  // Max: 20. Min: any (including negative values). UNSET = trainer default (typically 5);
+  // an explicit 0 means literally zero (optional exists to disambiguate 0 from unset).
+  optional int32 min_snr_gamma = 26;
+  // Max: 1. Min: any (including negative values). UNSET = trainer default (typically 0.1);
+  // an explicit 0 disables noise offset (optional exists to disambiguate 0 from unset).
+  optional double noise_offset = 27;
+  // Optimizer-specific arguments. Examples:
+  //   AdamW8Bit: weight_decay=0.1
+  //   Adafactor: scale_parameter=False, relative_step=False, warmup_init=False
+  //   Prodigy: weight_decay=0.5, decouple=True, betas=0.9,0.99, use_bias_correction=False
+  string optimizer_args = 28;
+  // Diffusion NOISE scheduler for the training objective (ai-toolkit `train.noise_scheduler`).
+  // `TRAINING_NOISE_SCHEDULER_UNSPECIFIED` lets the trainer pick the canonical scheduler for
+  // `ModelTrainingConfig.model_family` (FLOWMATCH for FLUX/SD3/Z-Image/WAN/LTX, DDPM for SDXL).
+  voplica.types.ai.common.TrainingNoiseScheduler noise_scheduler = 29;
+  // Dataset-loader knobs (uniform across all selected datasets). These affect training
+  // results, so they are part of the hyperparameter set rather than per-dataset defaults.
+  // Caption token dropout rate (0..1). 0 disables dropout.
+  optional float caption_dropout_rate = 30;
+  // When true, shuffle caption tokens/tags per step (ai-toolkit `shuffle_tokens`).
+  optional bool shuffle_caption = 31;
+  // When true, cache VAE latents to disk to speed up multi-epoch training (default true in
+  // most trainers). Exposed so memory-constrained runs can disable it.
+  optional bool cache_latents_to_disk = 32;
+}

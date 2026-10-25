@@ -1,0 +1,204 @@
+# The TypeScript client @voplica/connect: built and tested on every pull request that touches it; on every version tag
+# (one per sync, `v<VERSION>`) published to GitHub Packages with the run's own GITHUB_TOKEN and installed back from
+# there, and published to npmjs.com by npm Trusted Publishing (OIDC, no token) once the repository variable
+# NPMJS_TRUSTED_PUBLISHING is true. The first npmjs.com version is published by hand: npmjs.com adds a trusted publisher
+# only to a package that exists.
+name: Client
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "clients/typescript/**"
+      - "proto/**"
+      - ".github/workflows/client.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  tree:
+    name: The published tree
+    runs-on: ubuntu-24.04
+    outputs:
+      present: ${{ steps.check.outputs.present }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Look for proto/
+        id: check
+        run: |
+          if [ -d proto ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::proto/ is not in the repository yet (the first sync publishes it): there is no client to build"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build and test
+    needs: tree
+    if: needs.tree.outputs.present == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: clients/typescript
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Refuse a tag that is not v$(cat VERSION)
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: .
+        run: |
+          version="$(cat VERSION)"
+          if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::VERSION is \"$version\", not X.Y.Z: nothing is published"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::the tag $GITHUB_REF_NAME is not v$version (VERSION): nothing is published"
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clients/typescript/package-lock.json
+      - run: npm ci
+      - run: npm run generate
+      - run: npm run barrel
+      - run: npm run build
+      - run: npm test
+      - name: Take the version from VERSION
+        if: hashFiles('VERSION') != ''
+        run: npm version "$(cat ../../VERSION)" --no-git-tag-version
+      - name: Put the licence in the package
+        run: cp ../../LICENSE LICENSE
+      - run: npm pack
+      - uses: actions/upload-artifact@v7
+        with:
+          name: voplica-connect
+          path: clients/typescript/voplica-connect-*.tgz
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  publish:
+    name: Publish to GitHub Packages
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write   # the run's own token publishes the package linked to this repository (GitHub Packages' documented route)
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Refuse a tag that is not v$(cat VERSION)
+        run: |
+          version="$(cat VERSION)"
+          if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::VERSION is \"$version\", not X.Y.Z: nothing is published"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::the tag $GITHUB_REF_NAME is not v$version (VERSION): nothing is published"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: "@voplica"
+      - uses: actions/download-artifact@v8
+        with:
+          name: voplica-connect
+          path: package
+      - name: Publish @voplica/connect
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if out=$(npm view "@voplica/connect@$VERSION" version 2>&1) && [ "$(printf '%s\n' "$out" | tail -n 1)" = "$VERSION" ]; then
+            echo "::notice::@voplica/connect@$VERSION is already on GitHub Packages"
+            exit 0
+          fi
+          printf '%s\n' "$out" | sed -n 1,4p
+          # A path npm reads as a file: a bare `package/<file>` would be the GitHub shorthand `github:package/<file>`.
+          npm publish "./package/voplica-connect-$VERSION.tgz"
+
+  smoke:
+    name: Install it back from GitHub Packages
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: "@voplica"
+      - name: Install the published version into an empty directory and import it
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="$(cat VERSION)"
+          smoke="$RUNNER_TEMP/smoke"
+          mkdir "$smoke"
+          cp clients/typescript/test/registry-smoke.mjs "$smoke/"
+          echo '{ "private": true }' > "$smoke/package.json"
+          npm install --prefix "$smoke" --ignore-scripts "@voplica/connect@$version" @connectrpc/connect-node@2.1.2
+          node "$smoke/registry-smoke.mjs" "$(node clients/typescript/test/services.mjs proto)"
+
+  publish-npmjs:
+    name: Publish to npmjs.com
+    needs: build
+    # npm Trusted Publishing: no token. The owner sets NPMJS_TRUSTED_PUBLISHING once npmjs.com trusts this workflow (on
+    # the package @voplica/connect: organisation voplica, repository api, workflow client.yml, no environment, allowed
+    # action npm publish); until then the job is skipped.
+    if: startsWith(github.ref, 'refs/tags/v') && vars.NPMJS_TRUSTED_PUBLISHING == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write   # the OIDC identity npm exchanges for the publish and signs the provenance with
+      contents: read
+    steps:
+      # No registry-url: with one, setup-node writes an .npmrc whose token is a placeholder, sent to npmjs.com with
+      # every request. npm is told the registry on its command line instead.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: npm 11.21.0 (Trusted Publishing needs npm 11.5.1 or later and Node 22.14.0 or later)
+        run: |
+          npm install -g npm@11.21.0
+          echo "node $(node --version), npm $(npm --version)"
+          test "$(npm --version)" = 11.21.0
+      - uses: actions/download-artifact@v8
+        with:
+          name: voplica-connect
+          path: package
+      - name: Publish the packed tarball
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if out=$(npm view "@voplica/connect@$version" version --registry https://registry.npmjs.org 2>&1) && [ "$(printf '%s\n' "$out" | tail -n 1)" = "$version" ]; then
+            echo "::notice::@voplica/connect@$version is already on npmjs.com"
+            exit 0
+          fi
+          printf '%s\n' "$out" | sed -n 1,4p
+          # No token: npm exchanges the job's OIDC identity for a publish credential (id-token: write) and publishes a
+          # provenance statement signed with it.
+          npm publish "./package/voplica-connect-$version.tgz" --provenance --access public --registry https://registry.npmjs.org

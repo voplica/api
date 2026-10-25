@@ -1,0 +1,669 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.ai.dataset;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.ai.dataset";
+option go_package = "voplica.com/api/ai/dataset";
+option csharp_namespace = "Voplica.Api.Ai.Dataset";
+import "voplica/auth.proto";
+import "voplica/types/ai/common/subject_category.proto";
+import "voplica/types/ai/dataset/dataset_preparation.proto";
+import "voplica/types/ai/dataset/dataset_item_captioning_workflow.proto";
+import "voplica/types/base/asset_type.proto";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/workflow/privacy_mode.proto";
+
+message CreateDatasetPreparationRecipeRequest {
+  // Recipe payload. `id`, `owner_id`, `created_at`, and `recipe_fingerprint` are ignored
+  // on the request side - the service assigns them.
+  voplica.types.ai.dataset.DatasetPreparationRecipe recipe = 1;
+}
+
+message CreateDatasetPreparationRecipeResponse {
+  voplica.types.ai.dataset.DatasetPreparationRecipe recipe = 1;
+}
+
+message GetDatasetPreparationRecipeRequest {
+  // Recipe id (preferred) or recipe_fingerprint. Exactly one must be set.
+  oneof selector {
+    string recipe_id = 1;
+    string recipe_fingerprint = 2;
+  }
+}
+
+message GetDatasetPreparationRecipeResponse {
+  voplica.types.ai.dataset.DatasetPreparationRecipe recipe = 1;
+}
+
+message UpdateDatasetPreparationRecipeRequest {
+  string recipe_id = 1;
+  // Only display fields are mutable. Behavior-affecting fields require creating a new recipe
+  // (which yields a new `recipe_fingerprint`).
+  optional string name = 2;
+  optional string description = 3;
+  optional voplica.types.base.VisibilityType visibility = 4;
+}
+
+message UpdateDatasetPreparationRecipeResponse {
+  voplica.types.ai.dataset.DatasetPreparationRecipe recipe = 1;
+}
+
+message DeleteDatasetPreparationRecipeRequest {
+  string recipe_id = 1;
+}
+
+message DeleteDatasetPreparationRecipeResponse {
+}
+
+message ListDatasetPreparationRecipesRequest {
+  optional ListDatasetPreparationRecipesFilters filters = 1;
+  int64 limit = 2;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListDatasetPreparationRecipesFilters {
+  optional string owner_id = 1;
+  optional voplica.types.base.AssetType asset_type = 2;
+  // Matches recipes having AT LEAST ONE target with this category (category is a per-target
+  // property; a character recipe typically carries CHARACTER_GENERIC + CHARACTER_FACE).
+  optional voplica.types.ai.common.SubjectCategory category = 3;
+  optional voplica.types.base.VisibilityType visibility = 4;
+}
+
+message ListDatasetPreparationRecipesResponse {
+  repeated voplica.types.ai.dataset.DatasetPreparationRecipe recipes = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message DatasetPreparationRecipeRef {
+  oneof ref {
+    // Use a persistent recipe by id.
+    string recipe_id = 1;
+    // Use an ad-hoc recipe payload. Not persisted as a row in `dataset_preparation_recipes`,
+    // but the full payload is stored on the `DatasetPreparation` so it remains retrievable
+    // later via `GetDatasetPreparation(include_full_recipe = true)`.
+    voplica.types.ai.dataset.DatasetPreparationRecipe recipe = 2;
+  }
+}
+
+message PlanDatasetPreparationRequest {
+  string source_dataset_id = 1;
+  DatasetPreparationRecipeRef recipe_ref = 2;
+  voplica.types.ai.dataset.DatasetPreparationReusePolicy reuse_policy = 3;
+  // Optional subset. Empty means all source assets currently attached to the dataset.
+  repeated string source_asset_ids = 4;
+  // Optional config overrides to plan against (defaults: the existing preparation's config,
+  // or empty scope/captioning when no preparation exists yet). Lets the caller preview the
+  // cost of a scope/captioning change before applying it.
+  optional voplica.types.ai.dataset.DatasetPreparationSubjectScope subject_scope = 5;
+  optional voplica.types.ai.dataset.DatasetPreparationCaptioningConfig captioning = 6;
+}
+
+message PlanDatasetPreparationResponse {
+  voplica.types.ai.dataset.DatasetPreparationPlan plan = 1;
+  // The frozen source snapshot the plan was built from. Provided so callers can detect
+  // dataset drift between plan and subsequent `PrepareDataset` calls by comparing the
+  // `source_snapshot_fingerprint`.
+  voplica.types.ai.dataset.DatasetPreparationSourceSnapshot source_snapshot = 2;
+}
+
+message PrepareDatasetRequest {
+  string source_dataset_id = 1;
+  DatasetPreparationRecipeRef recipe_ref = 2;
+  voplica.types.ai.dataset.DatasetPreparationReusePolicy reuse_policy = 3;
+  // Optional subset. Empty means all source assets currently attached to the dataset.
+  repeated string source_asset_ids = 4;
+  // Optional client-provided idempotency key. If a run with the same idempotency key
+  // already exists for the dataset, the existing run is returned without starting a new
+  // workflow.
+  optional string idempotency_key = 5;
+  // Optional "if-match" guard. When set, `PrepareDataset` fails with FAILED_PRECONDITION
+  // if the current source dataset snapshot does not match this fingerprint. Use the
+  // `source_snapshot.source_snapshot_fingerprint` returned by `PlanDatasetPreparation` to
+  // guarantee the run uses the inputs the user reviewed.
+  optional string expected_source_snapshot_fingerprint = 6;
+  optional voplica.types.ai.dataset.DatasetPreparationSubjectScope subject_scope = 7;
+  optional voplica.types.ai.dataset.DatasetPreparationCaptioningConfig captioning = 8;
+  // Optional display name applied to the found-or-created preparation when it does not have
+  // a name yet (an existing non-empty name is never overwritten by this request - rename
+  // explicitly via `UpdateDatasetPreparationConfig`). Display-only, never fingerprinted.
+  optional string preparation_name = 9;
+  voplica.types.workflow.WorkflowPrivacyMode privacy_mode = 10;
+}
+
+message PrepareDatasetResponse {
+  // Run row created for this preparation (always created; it records the frozen inputs and
+  // the plan even when no work was needed). When the plan required no work the run is
+  // returned already COMPLETED and no workflow is started.
+  string preparation_run_id = 1;
+  // The mutable preparation this run writes into (find-or-created for
+  // `(source_dataset_id, recipe_fingerprint)`).
+  string preparation_id = 2;
+  // Workflow execution started for the run. Empty when no work was needed.
+  optional string workflow_execution_id = 3;
+  voplica.types.ai.dataset.DatasetPreparationPlan plan = 4;
+}
+
+message CancelDatasetPreparationRequest {
+  oneof target {
+    string preparation_run_id = 1;
+    // Root workflow execution id returned by `PrepareDataset` (or the combined
+    // prepare-and-train parent) - cancels the in-flight run(s) it owns.
+    string root_workflow_execution_id = 2;
+  }
+}
+
+message CancelDatasetPreparationResponse {
+  // Will typically be CANCELLING immediately, transitioning to CANCELLED once the worker
+  // acknowledges the cancellation.
+  voplica.types.base.JobStatus job_status = 1;
+}
+
+message DatasetPreparationByRecipe {
+  string source_dataset_id = 1;
+  string recipe_fingerprint = 2;
+}
+
+message GetDatasetPreparationRequest {
+  oneof selector {
+    string preparation_id = 1;
+    DatasetPreparationByRecipe by_recipe = 2;
+  }
+  // When true and the preparation was created from an AD-HOC recipe, populates
+  // `DatasetPreparation.embedded_recipe` with the persisted recipe payload.
+  bool include_full_recipe = 3;
+}
+
+message GetDatasetPreparationResponse {
+  voplica.types.ai.dataset.DatasetPreparation preparation = 1;
+}
+
+message ListDatasetPreparationsRequest {
+  optional string source_dataset_id = 1;
+  optional string recipe_fingerprint = 2;
+  optional string owner_id = 3;
+  int64 limit = 4;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListDatasetPreparationsResponse {
+  repeated voplica.types.ai.dataset.DatasetPreparation preparations = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+// Updates the preparation's MUTABLE, dataset-local configuration. Does NOT bump `version`
+// (config changes alter future planned work, not frozen content) and does not start any
+// workflow - follow with `PlanDatasetPreparation`/`PrepareDataset`.
+message UpdateDatasetPreparationConfigRequest {
+  string preparation_id = 1;
+  optional voplica.types.ai.dataset.DatasetPreparationSubjectScope subject_scope = 2;
+  optional voplica.types.ai.dataset.DatasetPreparationCaptioningConfig captioning = 3;
+  // Display name (rename). Absent = unchanged; empty string = clear the name. Display-only:
+  // never contributes to fingerprints or preparation reuse.
+  optional string name = 4;
+}
+
+message UpdateDatasetPreparationConfigResponse {
+  voplica.types.ai.dataset.DatasetPreparation preparation = 1;
+}
+
+message DeleteDatasetPreparationRequest {
+  string preparation_id = 1;
+}
+
+message DeleteDatasetPreparationResponse {
+}
+
+// Natural key of an item slot. Used by curation RPCs with FIND-OR-CREATE semantics so a user
+// can supply their OWN crop/mask/caption for a slot no worker ever filled.
+message PreparedItemNaturalKey {
+  string preparation_id = 1;
+  string source_asset_id = 2;
+  // Empty for WHOLE_IMAGE targets.
+  optional string subject_instance_id = 3;
+  string target_key = 4;
+}
+
+// Selects an existing item by id, or an item SLOT by natural key (which may not exist yet -
+// creating RPCs will find-or-create it; read RPCs return NOT_FOUND).
+message PreparedItemRef {
+  oneof ref {
+    string prepared_item_id = 1;
+    PreparedItemNaturalKey natural_key = 2;
+  }
+}
+
+message GetPreparedItemRequest {
+  PreparedItemRef item = 1;
+  optional voplica.types.ai.dataset.PreparedItemFetchingOptions fields_fetching_options = 2;
+}
+
+message GetPreparedItemResponse {
+  voplica.types.ai.dataset.PreparedItem item = 1;
+}
+
+message ListPreparedItemsFilters {
+  repeated string source_asset_ids = 1;
+  repeated string subject_ids = 2;
+  repeated string subject_instance_ids = 3;
+  repeated string target_keys = 4;
+  repeated voplica.types.ai.common.SubjectCategory categories = 5;
+  // Unset = non-excluded only (the training-ready view). true = excluded only. false = all.
+  optional bool excluded = 6;
+  // Items missing a caption in ANY of these formats (captioning work list). Multiple
+  // formats = one paging pass for a multi-format captioning job (OR semantics; the item's
+  // missing formats are visible on the item itself).
+  repeated voplica.types.ai.dataset.DatasetCaptionFormat missing_caption_formats = 7;
+  // Items missing a file of this kind (visual work list).
+  optional voplica.types.ai.dataset.PreparedFileKind missing_file_kind = 8;
+}
+
+message ListPreparedItemsRequest {
+  string preparation_id = 1;
+  optional ListPreparedItemsFilters filters = 2;
+  optional voplica.types.ai.dataset.PreparedItemFetchingOptions fields_fetching_options = 3;
+  int64 limit = 4;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListPreparedItemsResponse {
+  repeated voplica.types.ai.dataset.PreparedItem items = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+// Replaces (or creates) ONE file of an item with a user-uploaded file (own crop, tweaked
+// mask). FIND-OR-CREATE on the natural key: provenance USER_EDITED when replacing an
+// auto-generated file, USER_AUTHORED when the slot (or the whole item) did not exist. Bumps
+// the preparation `version`; snapshots that froze the previous file are unaffected.
+// Auto-preparation and re-runs never overwrite USER_* files.
+message OverridePreparedItemFileRequest {
+  PreparedItemRef item = 1;
+  voplica.types.ai.dataset.PreparedFileKind kind = 2;
+  voplica.types.file.FileInfo file = 3;
+}
+
+message OverridePreparedItemFileResponse {
+  voplica.types.ai.dataset.PreparedItem item = 1;
+}
+
+// Reverts one USER_* file back to the auto-generated one (re-preparing if needed) and bumps
+// the preparation version.
+message ResetPreparedItemFileRequest {
+  PreparedItemRef item = 1;
+  voplica.types.ai.dataset.PreparedFileKind kind = 2;
+}
+
+message ResetPreparedItemFileResponse {
+  voplica.types.ai.dataset.PreparedItem item = 1;
+}
+
+// Creates or replaces ONE caption (per format) of an item. FIND-OR-CREATE on the natural key
+// (an item slot with a user caption but no files yet is valid - files can arrive later).
+// Provenance USER_AUTHORED for a new caption, USER_EDITED when overwriting an auto-generated
+// one. Bumps the preparation version. The text must NOT contain trigger words.
+message UpsertPreparedItemCaptionRequest {
+  PreparedItemRef item = 1;
+  voplica.types.ai.dataset.DatasetCaptionFormat format = 2;
+  string text = 3;
+}
+
+message UpsertPreparedItemCaptionResponse {
+  voplica.types.ai.dataset.PreparedItem item = 1;
+}
+
+message DeletePreparedItemCaptionRequest {
+  PreparedItemRef item = 1;
+  voplica.types.ai.dataset.DatasetCaptionFormat format = 2;
+}
+
+message DeletePreparedItemCaptionResponse {
+  voplica.types.ai.dataset.PreparedItem item = 1;
+}
+
+// Reverts one caption to AUTO_GENERATED (regenerating via the captioning worker if needed).
+message ResetPreparedItemCaptionRequest {
+  PreparedItemRef item = 1;
+  voplica.types.ai.dataset.DatasetCaptionFormat format = 2;
+}
+
+message ResetPreparedItemCaptionResponse {
+  voplica.types.ai.dataset.PreparedItem item = 1;
+}
+
+// Curation: excluded items are omitted from future snapshots (and therefore from training).
+// Bumps the preparation version.
+message SetPreparedItemExcludedRequest {
+  PreparedItemRef item = 1;
+  bool excluded = 2;
+  optional string reason = 3;
+}
+
+message SetPreparedItemExcludedResponse {
+  voplica.types.ai.dataset.PreparedItem item = 1;
+}
+
+// Triggers `ai.dataset_item_captioning_workflow` over the preparation's items (see
+// `voplica/types/ai/dataset/dataset_item_captioning_workflow.proto`). Formats default to the
+// preparation's `captioning.formats` when empty.
+message GenerateDatasetItemCaptionsRequest {
+  string preparation_id = 1;
+  repeated voplica.types.ai.dataset.DatasetCaptionFormat formats = 2;
+  voplica.types.ai.dataset.DatasetItemCaptioningScope scope = 3;
+  // Overrides the preparation's `captioning.generation_config` for this trigger when set.
+  optional voplica.types.ai.dataset.DatasetCaptionGenerationConfig generation_config = 4;
+  // Optional idempotency key. Duplicate calls with the same key return the existing execution.
+  optional string idempotency_key = 5;
+  voplica.types.workflow.WorkflowPrivacyMode privacy_mode = 6;
+}
+
+message GenerateDatasetItemCaptionsResponse {
+  string workflow_execution_id = 1;
+  uint64 estimated_items_count = 2;
+}
+
+message GetDatasetPreparationSnapshotRequest {
+  string preparation_snapshot_id = 1;
+  voplica.types.ai.dataset.DatasetPreparationSnapshotFetchingOptions fields_fetching_options = 2;
+}
+
+message GetDatasetPreparationSnapshotResponse {
+  voplica.types.ai.dataset.DatasetPreparationSnapshot snapshot = 1;
+}
+
+message ListDatasetPreparationSnapshotsRequest {
+  optional ListDatasetPreparationSnapshotsFilters filters = 1;
+  int64 limit = 2;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListDatasetPreparationSnapshotsFilters {
+  optional string source_dataset_id = 1;
+  optional string preparation_id = 2;
+  optional string recipe_fingerprint = 3;
+  optional string owner_id = 4;
+}
+
+message ListDatasetPreparationSnapshotsResponse {
+  repeated voplica.types.ai.dataset.DatasetPreparationSnapshot snapshots = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message ListDatasetPreparationSnapshotItemsFilters {
+  repeated string source_asset_ids = 1;
+  repeated string subject_ids = 2;
+  repeated string target_keys = 3;
+  repeated voplica.types.ai.common.SubjectCategory categories = 4;
+  // Only items carrying a caption of this format.
+  optional voplica.types.ai.dataset.DatasetCaptionFormat caption_format_present = 5;
+}
+
+// The trainer's one-stream read: each row is a complete frozen training example
+// (sample file [, mask/alpha], captions per format).
+message ListDatasetPreparationSnapshotItemsRequest {
+  string preparation_snapshot_id = 1;
+  optional ListDatasetPreparationSnapshotItemsFilters filters = 2;
+  optional voplica.types.ai.dataset.PreparedItemFetchingOptions fields_fetching_options = 3;
+  int64 limit = 4;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListDatasetPreparationSnapshotItemsResponse {
+  repeated voplica.types.ai.dataset.DatasetPreparationSnapshotItem items = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message GetDatasetPreparationRunRequest {
+  oneof selector {
+    string preparation_run_id = 1;
+    // Inner workflow execution id (the one stored in `DatasetPreparationRun.workflow_execution_id`).
+    // Returns nothing for runs whose inner execution has not been launched yet.
+    string workflow_execution_id = 2;
+    // Root workflow execution id (the one returned to the caller by `PrepareDataset` or
+    // by `StartModelTrainingJob` for combined runs). Use this when the caller only has
+    // the user-facing execution id.
+    string root_workflow_execution_id = 3;
+  }
+}
+
+message GetDatasetPreparationRunResponse {
+  voplica.types.ai.dataset.DatasetPreparationRun run = 1;
+}
+
+message ListDatasetPreparationRunsRequest {
+  optional ListDatasetPreparationRunsFilters filters = 1;
+  int64 limit = 2;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListDatasetPreparationRunsFilters {
+  optional string source_dataset_id = 1;
+  optional string preparation_id = 2;
+  optional voplica.types.base.JobStatus status = 3;
+  optional string owner_id = 4;
+}
+
+message ListDatasetPreparationRunsResponse {
+  repeated voplica.types.ai.dataset.DatasetPreparationRun runs = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message ListDatasetPreparationRunItemsRequest {
+  string preparation_run_id = 1;
+  repeated string source_asset_ids = 2;
+  int64 limit = 3;
+  optional string cursor = 10;
+  bool before = 11;
+  bool check_more_available = 12;
+}
+
+message ListDatasetPreparationRunItemsResponse {
+  repeated voplica.types.ai.dataset.DatasetPreparationRunItem items = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+service DatasetPreparationService {
+  rpc CreateDatasetPreparationRecipe (CreateDatasetPreparationRecipeRequest) returns (CreateDatasetPreparationRecipeResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetDatasetPreparationRecipe (GetDatasetPreparationRecipeRequest) returns (GetDatasetPreparationRecipeResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateDatasetPreparationRecipe (UpdateDatasetPreparationRecipeRequest) returns (UpdateDatasetPreparationRecipeResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeleteDatasetPreparationRecipe (DeleteDatasetPreparationRecipeRequest) returns (DeleteDatasetPreparationRecipeResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListDatasetPreparationRecipes (ListDatasetPreparationRecipesRequest) returns (ListDatasetPreparationRecipesResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Returns what would be reused, prepared, and captioned before starting preparation.
+  // Read-only. Restricted to the dataset owner.
+  rpc PlanDatasetPreparation (PlanDatasetPreparationRequest) returns (PlanDatasetPreparationResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Plans preparation, find-or-creates the dataset's `DatasetPreparation` for the recipe,
+  // persists a run row (with its frozen work items), and starts the workflow when work is
+  // needed. Restricted to the dataset owner.
+  rpc PrepareDataset (PrepareDatasetRequest) returns (PrepareDatasetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Cancels the workflow for an in-flight preparation run.
+  // Restricted to the dataset owner OR the user who started the run.
+  rpc CancelDatasetPreparation (CancelDatasetPreparationRequest) returns (CancelDatasetPreparationResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Visibility follows source dataset visibility plus the dataset's download_allowed flag.
+  rpc GetDatasetPreparation (GetDatasetPreparationRequest) returns (GetDatasetPreparationResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc ListDatasetPreparations (ListDatasetPreparationsRequest) returns (ListDatasetPreparationsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateDatasetPreparationConfig (UpdateDatasetPreparationConfigRequest) returns (UpdateDatasetPreparationConfigResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeleteDatasetPreparation (DeleteDatasetPreparationRequest) returns (DeleteDatasetPreparationResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetPreparedItem (GetPreparedItemRequest) returns (GetPreparedItemResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc ListPreparedItems (ListPreparedItemsRequest) returns (ListPreparedItemsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc OverridePreparedItemFile (OverridePreparedItemFileRequest) returns (OverridePreparedItemFileResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ResetPreparedItemFile (ResetPreparedItemFileRequest) returns (ResetPreparedItemFileResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc UpsertPreparedItemCaption (UpsertPreparedItemCaptionRequest) returns (UpsertPreparedItemCaptionResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeletePreparedItemCaption (DeletePreparedItemCaptionRequest) returns (DeletePreparedItemCaptionResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ResetPreparedItemCaption (ResetPreparedItemCaptionRequest) returns (ResetPreparedItemCaptionResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc SetPreparedItemExcluded (SetPreparedItemExcludedRequest) returns (SetPreparedItemExcludedResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GenerateDatasetItemCaptions (GenerateDatasetItemCaptionsRequest) returns (GenerateDatasetItemCaptionsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetDatasetPreparationSnapshot (GetDatasetPreparationSnapshotRequest) returns (GetDatasetPreparationSnapshotResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc ListDatasetPreparationSnapshots (ListDatasetPreparationSnapshotsRequest) returns (ListDatasetPreparationSnapshotsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // The trainer's one-stream read of complete frozen training examples.
+  rpc ListDatasetPreparationSnapshotItems (ListDatasetPreparationSnapshotItemsRequest) returns (ListDatasetPreparationSnapshotItemsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetDatasetPreparationRun (GetDatasetPreparationRunRequest) returns (GetDatasetPreparationRunResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListDatasetPreparationRuns (ListDatasetPreparationRunsRequest) returns (ListDatasetPreparationRunsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListDatasetPreparationRunItems (ListDatasetPreparationRunItemsRequest) returns (ListDatasetPreparationRunItemsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+}

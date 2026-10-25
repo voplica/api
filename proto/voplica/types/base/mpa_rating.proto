@@ -1,0 +1,40 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.base;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.base";
+option go_package = "voplica.com/types/base";
+option csharp_namespace = "Voplica.Types.Base";
+
+// Motion Picture Association film rating system
+// Wiki: https://en.wikipedia.org/wiki/Motion_Picture_Association_film_rating_system
+enum MPARating {
+  MPA_RATING_UNSPECIFIED = 0;
+  // G - General Audiences
+  // All ages admitted. Nothing that would offend parents for viewing by children.
+  G = 1;
+  // PG - Parental Guidance Suggested
+  // Some material may not be suitable for children. Parents urged to give "parental guidance". May contain some material parents might not like for their young children.
+  // Example: Some content that may be questionable, but it is safe for work (no nudity).
+  PG = 2;
+  // PG-13 - Parents Strongly Cautioned
+  // Some material may be inappropriate for children under 13. Parents are urged to be cautious. Some material may be inappropriate for pre-teenagers.
+  // Example: Revealing clothing, small bulges, subtle nipple outline, posing/sexualized bare chested men, light gore, violence.
+  PG_13 = 3;
+  // R - Restricted
+  // Under 17 requires accompanying parent or adult guardian. Contains some adult material. Parents are urged to learn more about the film before taking their young children with them.
+  // Example: Adult themes and situations, partial nudity, bikinis, big bulges, sexual situations, graphic violence.
+  R = 4;
+  // X (NC-17) - Adults Only
+  // No one 17 and under admitted. Clearly adult. Children are not admitted.
+  // Example: Graphic nudity, genitalia, adult objects, or settings.
+  X = 5;
+  // XXX - non-standard MPA rating to mark extremely disturbing content.
+  // Example: Sexual Acts, masturbation, ejaculation, cum, vore, anal gape, extremely disturbing content.
+  XXX = 6;
+}

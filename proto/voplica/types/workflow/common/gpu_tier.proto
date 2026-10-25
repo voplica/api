@@ -1,0 +1,32 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.workflow.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.workflow.common";
+option go_package = "voplica.com/types/workflow/common";
+option csharp_namespace = "Voplica.Types.Workflow.Common";
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.EnumValueOptions {
+  optional WorkflowGpuRequirementExtension gpu_tier_extension = 50143;
+}
+
+message WorkflowGpuRequirementExtension {
+  uint32 vram_gb = 1;
+}
+
+// GPU tier - applicable only to Activities
+enum WorkflowGpuTier {
+  WORKFLOW_GPU_TIER_UNSPECIFIED = 0 [(gpu_tier_extension) = { vram_gb: 0 }];
+  NO_GPU = 1 [(gpu_tier_extension) = { vram_gb: 0 }];
+  // Step will be scheduled on the machine with at least 24 GB of vRAM
+  S_GPU = 2 [(gpu_tier_extension) = { vram_gb: 24 }];
+  // Step will be scheduled on the machine with at least 48 GB of vRAM
+  M_GPU = 3 [(gpu_tier_extension) = { vram_gb: 48 }];
+  // Step will be scheduled on the machine with at least 80 GB of vRAM
+  L_GPU = 4 [(gpu_tier_extension) = { vram_gb: 80 }];
+}

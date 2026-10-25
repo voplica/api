@@ -1,0 +1,24 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.common";
+option go_package = "voplica.com/types/ai/common";
+option csharp_namespace = "Voplica.Types.Ai.Common";
+
+enum CaptioningConflictStrategy {
+  CAPTIONING_CONFLICT_STRATEGY_UNSPECIFIED = 0;
+  // Skips files with existing captions
+  IGNORE = 1;
+  // Overwrite existing captions
+  OVERWRITE = 2;
+  // Append newly generated captions after existing captions
+  APPEND_NEW_TO_END = 3;
+  // Append newly generated captions before existing captions
+  APPEND_NEW_TO_BEGINNING = 4;
+}

@@ -1,0 +1,38 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.price;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.price";
+option go_package = "voplica.com/types/price";
+option csharp_namespace = "Voplica.Types.Price";
+import "voplica/types/base/big_decimal.proto";
+
+//How often to bill a customer for the given product item
+enum RecurringInterval {
+  RECURRING_INTERVAL_UNSPECIFIED = 0; //not specified
+  NONE = 1; //one time payment
+  DAY = 2; //daily billing statement
+  MONTH = 3; //monthly billing statement
+  WEEK = 4; //weekly billing statement
+  YEAR = 5; //one a year billing statement
+}
+
+enum OperationType {
+  OPERATION_TYPE_UNSPECIFIED = 0; //not specified
+  WORKFLOW_EXECUTION = 1;
+}
+
+message Price {
+  string id = 1;
+  string stripe_price_id = 2;
+  bool is_default = 3;
+  bool is_active = 4;
+  voplica.types.base.BigDecimalValue price = 5; //price for the item
+  optional string currency = 6;
+  voplica.types.price.RecurringInterval recurring_interval = 7;
+}

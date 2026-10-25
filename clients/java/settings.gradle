@@ -1,0 +1,2 @@
+// com.voplica:voplica-api, the Java client of the Voplica API: build.gradle says how it is made.
+rootProject.name = 'voplica-api'

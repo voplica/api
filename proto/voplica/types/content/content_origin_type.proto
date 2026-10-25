@@ -1,0 +1,28 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.content;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.content";
+option go_package = "voplica.com/types/content";
+option csharp_namespace = "Voplica.Types.Content";
+
+// How the content was originally created.
+//
+// WORKFLOW content was produced by a workflow execution (auto-created or manually
+// created from step outputs). UPLOAD content was uploaded directly by the user
+// (e.g., content generated externally with Midjourney, ComfyUI, etc.).
+//
+// Denormalized on ContentPost for efficient filtering — avoids needing to
+// inspect the provenance.origin oneof for every query.
+enum ContentOriginType {
+  CONTENT_ORIGIN_TYPE_UNSPECIFIED = 0;
+  // Content produced by the Voplica Workflow Engine
+  WORKFLOW = 1;
+  // Content uploaded by the user (generated externally or otherwise)
+  UPLOAD = 2;
+}

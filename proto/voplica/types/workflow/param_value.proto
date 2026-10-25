@@ -1,0 +1,208 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.workflow;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.workflow";
+option go_package = "voplica.com/types/workflow";
+option csharp_namespace = "Voplica.Types.Workflow";
+import "voplica/types/base/param.proto";
+import "voplica/types/base/compare_operator.proto";
+import "voplica/types/base/param_condition.proto";
+import "google/protobuf/empty.proto";
+
+message WorkflowResolvableParamValue {
+  // Value to return
+  oneof value {
+    // Supply literal value directly
+    // When packing a complex type into a literal there are two ways of doing so:
+    // 1) Using `any_value` that will hold bytes of the serialized object as well as target url of its type.
+    // 2) Using `bytes_value` that will hold bytes of the serialized object. In this case the type is inferred from the `key` of the supplied param.
+    voplica.types.base.ParamValue literal = 1;
+    // Map value allows to provide nested values
+    WorkflowResolvableMapParamValue map_value = 2;
+    // List value to provide multiple values
+    WorkflowResolvableListParamValue list_value = 3;
+    // Get value from the output of any step of the current workflow
+    WorkflowStepOutputParamReference step_output_ref = 4;
+    // Get value from the input values of the current workflow
+    WorkflowInputParamReference input_ref = 5;
+    // Get value from the input of any step of the current workflow
+    WorkflowStepInputParamReference step_input_ref = 6;
+  }
+  // If evaluated to `false` then `value` resolution is skipped and the provided `fallback_strategy` applies.
+  // If fallback strategy is not provided - `value` becomes `unresolved`.
+  optional WorkflowStepCondition resolve_value_condition = 11;
+  // Fallback strategy is applicable if the `value` cannot be resolved due to unresolvable references
+  oneof fallback_strategy {
+    // Keep parameter as unresolvable - the parent wrapper value will then apply its own `fallback_strategy`,
+    // or if it's the root value then the processing logic will apply its strategy.
+    google.protobuf.Empty unresolved = 20;
+    // Returns nothing - only applicable if the schema accepts `optional` value.
+    // When used in `Map` structure - it means to not adding the key where this value was used.
+    // When used in `List` structure - it means to skip / remove this value from the list.
+    google.protobuf.Empty none = 21;
+    // Returns alternative / fallback value if the main `value` was unresolved.
+    WorkflowResolvableParamValue fallback_value = 22;
+  }
+}
+
+message WorkflowResolvableMapParamValue {
+  map<string, WorkflowResolvableParamValue> map = 1;
+}
+
+message WorkflowResolvableListParamValue {
+  repeated WorkflowResolvableParamValue values = 2;
+}
+
+message WorkflowParamValueWithPath {
+  // If empty string then `value_source` is used as is. Otherwise, a nested value is selected.
+  string field_path = 1;
+  // Value source (constant or reference or mix of constants and references)
+  WorkflowResolvableParamValue value_source = 2;
+}
+
+// Compares left value to one or more right values using the provided operator.
+// If `IN` operator is provided then it checks that the provided right values list contains left value.
+// For all other operators (EQ, NE, GT, GTE, LT, LTE) it checks each right value with left value.
+// All such checks are combined via `AND` in this case, meaning all checks should be `true` so that this comparator resolves to `true`.
+// Notice: If any of values (`left_value` or `right_values`) are unresolved due to unsatisfied references
+// (for example, when iteration for the value is unsatisfied) then the whole condition becomes `NULL` (neither `true` nor `false`).
+// `NULL` conditions are turning other parent conditions into `NULL`. `NULL` basically means - the condition cannot be calculated.
+message WorkflowParamValueComparatorExpression {
+  WorkflowParamValueWithPath left_value = 1;
+  voplica.types.base.CompareOperator operator = 2;
+  repeated WorkflowParamValueWithPath right_values = 3;
+}
+
+// Iteration comparator simply checks the Step's iteration, but doesn't check the output values of the Step
+message WorkflowStepIterationComparator {
+  uint32 step_id = 1;
+  // Provide what iteration is required for this dependency.
+  // This is the condition that simply validates that the Step's Iteration that we want has already been executed.
+  // It doesn't validate `current_iteration` of the Step we refer to, but simply checks that the Step has been executed before with the iteration we need.
+  // The difference between `current_iteration_condition` is that selecting `specific_iteration = 0` will always resolve to `true`
+  // here (because we consider that any Step was executed 0 times), while setting `specific_iteration = 0` in `current_iteration_condition`
+  // will result to `true` only if the Step has not been executed at all (because if it was executed, its current iteration is no longer 0).
+  optional WorkflowIterationSelector iteration_selector = 2;
+  // This is the condition for current iteration of the Step we refer to.
+  // - if `latest` / `first` is selected - it means `current_iteration` of the Step we refer to can be any but 0. Basically it means the Step should have been executed at least once.
+  // - `specific_iteration` means that the `current_iteration` of the Step we refer to should equal to the provided number. Notice, all Steps at the beginning have iteration `0`.
+  // - `relative_iteration` means that the `current_iteration` of the Step we refer to should be relative to the iteration of the Step we want to process. Relative numbers can be negative.
+  // - if `next_iteration` is selected for `current_iteration_condition` - it means that the Step we refer to should have the iteration number +1 to what the consuming Step has.
+  //   For example, if the consuming step was executed 0 times, the Step we refer to should have been executed at least once.
+  optional WorkflowIterationSelector current_iteration_condition = 3;
+}
+
+// WorkflowStepCondition is resolved to `true` if all provided conditions and comparators are resolved to true.
+// In other words WorkflowStepCondition is resolved to `and_conditions && or_conditions && not_conditions && value_comparators && iteration_comparators`.
+message WorkflowStepCondition {
+  // `and_conditions` resolves to `true` if all conditions are `true`. Empty list is resolved to `true`.
+  repeated WorkflowStepCondition and_conditions = 1;
+  // `or_conditions` resolves to `true` if any condition is `true`. Empty list is resolved to `true`.
+  repeated WorkflowStepCondition or_conditions = 2;
+  // `not_conditions` resolves to `true` if all conditions are `false`. Empty list is resolved to `true`.
+  repeated WorkflowStepCondition not_conditions = 3;
+  // Value comparators resolves to `true` if all value comparators are `true`. Empty list is resolved to `true`.
+  repeated WorkflowParamValueComparatorExpression value_comparators = 4;
+  // Iteration comparators resolve to `true` if all iteration comparators resolved to `true`. Empty list is resolved to `true`.
+  repeated WorkflowStepIterationComparator iteration_comparators = 5;
+}
+
+// Reference to a step's output
+message WorkflowStepOutputParamReference {
+  // Which step's output to reference
+  uint32 step_id = 1;
+  // Dot-formatted output field selector. Empty string == whole output
+  // Example: "image.url" to get nested field
+  // This only says what value we select from output for evaluation,
+  // but the final used values might be modified via `values_selector`.
+  // For proper path, check value specification of the used Node Input or Child Workflow Input in the selected Step.
+  string field_path = 2;
+  // How to select from multiple iterations
+  WorkflowIterationSelector iteration_selector = 3;
+  // How to select from multiple values within selected iterations
+  optional WorkflowParamValuesSelector values_selector = 4;
+}
+
+// Reference to a step's input
+message WorkflowStepInputParamReference {
+  // Which step's input to reference
+  uint32 step_id = 1;
+  // Dot-formatted input field selector. Empty string == whole input
+  // Example: "image.url" to get nested field
+  // This only says what value we select from input for evaluation,
+  // but the final used values might be modified via `values_selector`.
+  // Notice, that a Step may use either Node processor or Child Workflow processor.
+  // When Child Workflow processor is selected the empty `field_path` means to get all inputs as a map,
+  // but usually we are interested only in a specific input. Thus, the first word in the expression will
+  // mean the `key` of the input map.
+  string field_path = 2;
+  // How to select from multiple iterations
+  WorkflowIterationSelector iteration_selector = 3;
+  // How to select from multiple values within selected iterations
+  optional WorkflowParamValuesSelector values_selector = 4;
+}
+
+// Reference to workflow input
+message WorkflowInputParamReference {
+  // Dot-formatted input field selector. Empty string == whole input
+  // This only says what value we select from input for evaluation,
+  // but the final used values might be modified via `values_selector`.
+  // Notice, the Workflow Input is always a Map. As such, if the `field_path`
+  // is empty - it will return the whole workflow input for evaluation.
+  // However, usually we are interested only in a specific input.
+  // Thus, the first word in the expression will  mean the `key` of the input map.
+  string field_path = 1;
+  // How to select from multiple values (if input is a list)
+  optional WorkflowParamValuesSelector values_selector = 2;
+}
+
+// Selects which iteration(s) to get outputs from
+message WorkflowIterationSelector {
+  oneof selector {
+    // Get output from the latest iteration
+    google.protobuf.Empty latest = 1;
+    // Get output from the first iteration
+    google.protobuf.Empty first = 2;
+    // Get output from a specific iteration number (0-based)
+    uint32 specific_iteration = 3;
+    // Get output from iteration relative to current (e.g., -1 = previous iteration)
+    int32 relative_iteration = 4;
+    // Get output from next iteration (equivalent to `relative_iteration = 1`)
+    google.protobuf.Empty next_iteration = 5;
+  }
+}
+
+// Selects specific values from the referenced data
+message WorkflowParamValuesSelector {
+  // Indexes of specific values to consider (0-based)
+  // If not provided, all values are considered
+  // Only applicable to list/repeated values
+  repeated uint32 considered_indexes = 1;
+  // Dot-formatted path to extract nested fields from each value
+  // Empty string = return values as is
+  // Example: "file.id" to extract just the ID from FileInfo objects
+  string return_field_path = 2;
+  // Dot-formatted path defining which field to apply filters on
+  // Empty string = apply filter on root value
+  // Example: "metadata.score" to filter based on a nested score field
+  string filter_field_path = 3;
+  // Filter to apply to each value
+  optional voplica.types.base.ParamValueCondition per_value_filter = 4;
+  // How to select from matched values
+  oneof select_mode {
+    // Select all matched values (returns list)
+    google.protobuf.Empty select_all = 10;
+    // Select first matched value
+    google.protobuf.Empty select_first = 11;
+    // Select last matched value
+    google.protobuf.Empty select_last = 12;
+    // Select nth matched value (0-based)
+    int32 select_nth = 13;
+  }
+}

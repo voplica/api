@@ -1,0 +1,23 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.vault;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.vault";
+option go_package = "voplica.com/types/vault";
+option csharp_namespace = "Voplica.Types.Vault";
+
+// Third-party platforms whose user-owned API tokens the vault can hold.
+// Only CIVITAI and HUGGING_FACE have consumers today (model import); the other values reserve
+// the names of platforms the owner listed for future per-user keys.
+enum ThirdPartyProvider {
+  THIRD_PARTY_PROVIDER_UNSPECIFIED = 0;
+  CIVITAI = 1;
+  HUGGING_FACE = 2;
+  GOOGLE_AI = 3;
+  SEEDANCE = 4;
+}

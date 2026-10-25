@@ -1,0 +1,28 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.base;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.base";
+option go_package = "voplica.com/types/base";
+option csharp_namespace = "Voplica.Types.Base";
+
+enum ReadinessStatus {
+  READINESS_STATUS_UNSPECIFIED = 0;
+  // An entity is created / initialized, but not ready to be served.
+  // Example: An asset was created, but none of the files were added to it yet.
+  READINESS_AWAITING = 1;
+  // An entity is fully ready to be served.
+  // Example: An asset is processed with at least 1 file added to it.
+  READINESS_READY = 2;
+  // An entity failed while awaiting to become ready.
+  // Example: Files processing failed for the asset. As such, the asset is now in a failed state.
+  READINESS_FAILED = 3;
+  // An entity is not available and cannot be accessed anymore.
+  // Example: Asset is no longer accessible because it was deleted or it never existed in the first place.
+  READINESS_UNAVAILABLE = 4;
+}

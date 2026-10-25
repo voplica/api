@@ -1,0 +1,116 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.character;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.character";
+option go_package = "voplica.com/types/character";
+option csharp_namespace = "Voplica.Types.Character";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/publish_status.proto";
+import "voplica/types/base/gender_type.proto";
+import "voplica/types/character/character_look.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/ai/common/model_reference.proto";
+
+message Character {
+  string id = 1;
+  string name = 2;
+  string owner_id = 3;
+  voplica.types.base.VisibilityType visibility = 4;
+  voplica.types.base.GenderType gender = 5;
+  uint64 created_at = 6;
+  // Status
+  voplica.types.base.PublishStatus status = 7;
+  // Note: file_variant_groups are returned only if requested explicitly
+  optional voplica.types.file.AssetFileVariantGroups default_preview = 8;
+  // Means this character is intended to produce NSFW content.
+  // This flag must be `true` if any of these is `true`:
+  // - any of the used model variants are related to NSFW model.
+  // - any of the character preview assets are NSFW.
+  // - character descriptions / personality is aiming towards NSFW.
+  bool nsfw = 9;
+  // The recommended look. If not set explicitly then the most recent look is used.
+  // Unset when the character has no looks.
+  // Note: the nested `default_look.default_preview` file_variant_groups are returned only if requested
+  // explicitly, resolved by the SAME `CharacterFieldsFetchingOptions.default_preview_retriever` that
+  // serves `default_preview` above -- exactly how GenModel resolves
+  // `default_model_variant.default_preview` through `ModelFieldsFetchingOptions.default_preview_retriever`.
+  optional voplica.types.character.CharacterLookShortPreview default_look = 10;
+  // Engagement metrics (read-only, updated by the platform). Renamed from views_count/checks_count -- see the
+  // checks->views/views->engagement terminology rename.
+  uint64 likes_count = 20;
+  uint64 engagement_count = 21;
+  uint64 views_count = 22;
+  uint64 usage_count = 23;
+}
+
+message CharacterMetadata {
+  // Model assignments
+  CharacterModelSet models = 1;
+  // LLM personality/description for chat/roleplay
+  CharacterPersonality personality = 2;
+  string description = 3;
+  // Manually set default preview asset.
+  // If `false` - it means that the default preview is using `latest` asset selection strategy.
+  bool default_preview_manual_selected = 4;
+  // Helper prompt for diffusion models that better describe look of the character
+  string look_prompt = 5;
+  // User-editable tags (can be set at publish time or updated later)
+  repeated string tags = 6;
+  // Manually set default look.
+  // If `false` - it means that the default look is using `latest` look selection strategy.
+  bool default_look_manual_selected = 7;
+}
+
+// Optional persona sheet for a character. Everything here is authored by the owner and
+// consumed by LLM surfaces (the Movie director's script planning first): it shapes how the
+// character behaves, sounds and reacts in generated scenes. All fields optional; an empty
+// message is equivalent to no personality.
+message CharacterPersonality {
+  // system_prompt (1): superseded by the structured fields below — the director composes
+  // its own persona brief. voice_description (4): a character's VOICE is CharacterVoice
+  // (models.main_voice); a prose voice description here duplicated and fought it.
+  reserved 1, 4;
+  reserved "system_prompt", "voice_description";
+  // Trait keywords/short phrases, e.g. ["funny", "sometimes silly", "likes pranks"].
+  repeated string traits = 2;
+  // Background/lore: who they are, where they come from, what shaped them.
+  optional string backstory = 3;
+  // Example lines, verbatim, in the character's own voice — one line each.
+  repeated string example_dialogues = 5;
+  // How they talk: tone, vocabulary, pace, catchphrases (prose).
+  optional string speaking_style = 6;
+  // What drives them: likes, dislikes, goals, fears (prose).
+  optional string motivations = 7;
+}
+
+message CharacterModelSet {
+  // Image generation models
+  repeated voplica.types.ai.common.ModelReference generic_image_model = 1; // Full body / general
+  repeated voplica.types.ai.common.ModelReference face_image_model = 2; // Face-focused LoRA
+  repeated voplica.types.ai.common.ModelReference style_image_model = 3; // Style/clothing LoRA
+  // Video generation models
+  repeated voplica.types.ai.common.ModelReference generic_video_model = 10;
+  // Audio models (voice). RESERVED for a future *trained* voice model (a fine-tuned/learned
+  // speaker model). NOT used for the clip-based main voice below -- the model taxonomy cannot
+  // express a voice today. Do not repurpose.
+  repeated voplica.types.ai.common.ModelReference voice_model = 20;
+  optional CharacterVoice main_voice = 21;
+}
+
+message CharacterVoice {
+  optional voplica.types.file.FileReference audio_asset = 1;
+  // Optional AUDIO dataset (a collection of reference clips of the same voice) for richer
+  // provenance / future higher-quality selection or training. Referenced by dataset id, matching
+  // the `dataset_id` convention used elsewhere (e.g. `AttachDatasetToCharacterRequest.dataset_id`).
+  // When both are set, `audio_asset` is the chosen representative clip from this dataset.
+  optional string audio_dataset_id = 2;
+  optional string reference_transcript = 3;
+  optional string language = 4;
+  optional string voice_id = 5;
+}

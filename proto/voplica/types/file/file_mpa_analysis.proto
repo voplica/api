@@ -1,0 +1,46 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.file;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.file";
+option go_package = "voplica.com/types/file";
+option csharp_namespace = "Voplica.Types.File";
+import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/base/media_style.proto";
+import "voplica/types/base/hazard_category.proto";
+
+// The platform's content-rating analysis of a file: the rating it found and why, the media style, the findings
+// and hazard categories behind it, and which analyzer ran it, when.
+message FileMpaAnalysis {
+  // Analyzed rating for this file.
+  voplica.types.base.MPARating mpa_rating = 1;
+  reserved 2;
+  reserved 3;
+  reserved 4;
+  voplica.types.base.MediaStyle style = 5;
+  float style_confidence = 6;
+  // Capped (<=16), sorted by severity.
+  repeated MpaFinding findings = 7;
+  repeated voplica.types.base.HazardCategory hazard_categories = 8;
+  // Capped (<=10), sanitized upstream of use.
+  repeated string suggested_tags = 9;
+  // Short human text, e.g. "exposed buttocks".
+  string rating_reason = 10;
+  // <=2000 chars, audio/video only.
+  optional string transcript_excerpt = 11;
+  reserved 12;
+  // Pipeline version tag, e.g. "mpa-v1".
+  string analyzer_version = 13;
+  uint64 analyzed_at = 14;
+  // A single detected finding and the rating it implies.
+  message MpaFinding {
+    string label = 1;
+    voplica.types.base.MPARating implied_rating = 2;
+    float confidence = 3;
+  }
+}

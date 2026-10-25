@@ -1,0 +1,83 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.account;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.account";
+option go_package = "voplica.com/types/account";
+option csharp_namespace = "Voplica.Types.Account";
+
+// A profile picture the platform's analysis flagged as a policy violation is hidden from non-owners until an admin
+// reviews it. The state is per picture and bound to the asset id it is about, so replacing the picture drops the
+// decision with the picture it judged.
+enum ProfilePictureRestrictionStatus {
+  PROFILE_PICTURE_RESTRICTION_STATUS_UNSPECIFIED = 0;
+  // Hidden from every non-owner; awaiting an admin.
+  PROFILE_PICTURE_RESTRICTION_RESTRICTED = 1;
+  // An admin cleared it. Shown to everyone, AND the automated path may never restrict this asset id again.
+  PROFILE_PICTURE_RESTRICTION_APPROVED = 2;
+  // An admin upheld it. Hidden for ever; only an admin APPROVE leaves this state.
+  PROFILE_PICTURE_RESTRICTION_REJECTED = 3;
+  PROFILE_PICTURE_RESTRICTION_BAN_HIDDEN = 4;
+}
+
+// Why the restriction was set. A BAN is deliberately NOT a value here: it rides its own account-wide
+// flag so that unbanning cannot silently destroy an admin's APPROVED decision.
+enum ProfilePictureRestrictionReason {
+  PROFILE_PICTURE_RESTRICTION_REASON_UNSPECIFIED = 0;
+  // The platform's MPA analysis returned a moderation status that hides the asset from non-owners.
+  PROFILE_PICTURE_RESTRICTION_REASON_AUTO_FLAGGED = 1;
+  // An admin's by-hand take-down.
+  PROFILE_PICTURE_RESTRICTION_REASON_ADMIN = 2;
+  // The repeat-offender window: a new picture of an account with recent auto-flags is held until its own
+  // analysis clears it. The ONLY reason an automated path may clear.
+  PROFILE_PICTURE_RESTRICTION_REASON_PROBATION = 3;
+  reserved 4;
+  reserved "PROFILE_PICTURE_RESTRICTION_REASON_SOFT_REVIEW";
+}
+
+// One picture's restriction. Present ONLY on a PRIVILEGED read - the account's owner, or an admin that
+// names no viewer (the platform's unfiltered admin read). A stranger receives neither the picture's
+// asset id nor this record, so the record is never itself a disclosure.
+message ProfilePictureRestriction {
+  ProfilePictureRestrictionStatus status = 1;
+  ProfilePictureRestrictionReason reason = 2;
+  // The asset this decision is about. Always equal to the account's CURRENT picture id on a live
+  // record; a set that mints a new asset rebinds the record.
+  string asset_id = 3;
+  // Epoch millis of the decision.
+  int64 decided_at = 4;
+  // The admin's note. Absent for an automated decision (never an empty string standing for one).
+  optional string note = 5;
+  reserved 6;
+}
+
+message VoplicaAccount {
+  string id = 1;
+  // user_id who owns this account
+  // visible only if accessing user has access to this information
+  optional string user_id = 2;
+  // visible only if accessing user has access to this information
+  optional string avatar_asset_id = 3;
+  // visible only if accessing user has access to this information
+  optional string banner_asset_id = 4;
+  string username = 5;
+  reserved 6;
+  optional ProfilePictureRestriction avatar_restriction = 7;
+  optional ProfilePictureRestriction banner_restriction = 8;
+}
+
+message VoplicaAccountMetadata {
+  string account_id = 1;
+  // short description (up to 250 characters)
+  string description = 2;
+  optional string website_url = 3;
+  optional string instagram_username = 4;
+  optional string x_username = 5;
+  optional string youtube_username = 6;
+  optional string tiktok_username = 7;
+}

@@ -1,0 +1,22 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.common;
+option java_package = "com.voplica.types.ai.common";
+option java_multiple_files = true;
+option go_package = "voplica.com/types/ai/common";
+option csharp_namespace = "Voplica.Types.Ai.Common";
+
+enum ModelVariantRuntimeState {
+  MODEL_VARIANT_RUNTIME_STATE_UNSPECIFIED = 0;
+  // No live worker holds the model at any tier - expect a download AND a load.
+  MODEL_VARIANT_RUNTIME_STATE_COLD = 1;
+  // On disk on at least one live worker - expect a load, no download.
+  MODEL_VARIANT_RUNTIME_STATE_IDLE = 2;
+  // In RAM or VRAM on at least one live worker - the fastest start.
+  MODEL_VARIANT_RUNTIME_STATE_ACTIVE = 3;
+}

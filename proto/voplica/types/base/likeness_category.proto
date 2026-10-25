@@ -1,0 +1,57 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.base;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.base";
+option go_package = "voplica.com/types/base";
+option csharp_namespace = "Voplica.Types.Base";
+
+enum LikenessCategory {
+  LIKENESS_CATEGORY_UNSPECIFIED = 0;
+  // The content or model is based on the real adult person likeness.
+  // Adult person must write consent themselves to give explicit permission.
+  ADULT_PERSON = 1;
+  // The content or model is based on the real minor person likeness.
+  // Minor person requires parents or guardian to give explicit permission.
+  MINOR_PERSON = 2;
+  // The content or model is not based on the real person likeness or content that has non-free copyright requirements.
+  COPYRIGHT_FREE = 3;
+  // The content or model is not based on the real person.
+  // However, it is based on copyright protected content and / or content that requires commercial licensing.
+  // In this case, the producer must explicitly obtain permission to use likeness of such character or content.
+  COPYRIGHT_PROTECTED = 4;
+}
+
+message LikenessGrantedPermissionVerification {
+  oneof strategy {
+    voplica.types.base.CopyrightFreeLikeness copyright_free = 10;
+    // User must verify their identity to use this likeness verification type
+    voplica.types.base.PersonalLikeness personal = 11;
+    // User must verify their identity to use this likeness verification type
+    voplica.types.base.PermissionGrantedLikeness permission_granted = 12;
+  }
+}
+
+message CopyrightFreeLikeness {
+  // This indicates that the model / content is copyright free and doesn't require any permissions to be granted.
+}
+
+message PersonalLikeness {
+  // This indicates that the model / content is based on the user's own likeness and the user grants permission
+  // for the content / model to be posted at Voplica services.
+}
+
+message PermissionGrantedLikeness {
+  // The permission must be explicitly obtained and profs of the permission must be attached for review.
+  // Users that want to upload models based on someone likeness - must verify their identity before uploading such model / content for review.
+
+  // Identification of the person (for example First Name + Last Name) or known identification of the fictional character (for example name of the character + studio name).
+  string identification = 1;
+  // Uploaded documents that prove the permission is granted.
+  repeated string obtained_permission_asset_ids = 2;
+}

@@ -1,0 +1,113 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.file.upload;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.file.upload";
+option go_package = "voplica.com/types/file/upload";
+option csharp_namespace = "Voplica.Types.File.Upload";
+import "voplica/types/base/mime_type.proto";
+import "voplica/types/base/file_type.proto";
+import "voplica/types/base/asset_type.proto";
+
+enum FileUploadType {
+  FILE_UPLOAD_TYPE_UNSPECIFIED = 0;
+  // SIMPLE type refers to cases when the file
+  // is uploaded in a single request.
+  // Only small files can be uploaded in a single request.
+  SIMPLE = 1;
+  // MULTIPART type refers to cases when the file
+  // is uploaded in multiple requests (chunked upload)
+  MULTIPART = 2;
+}
+
+enum FileUploadStatus {
+  FILE_UPLOAD_STATUS_UNSPECIFIED = 0;
+  /**
+   * File upload was initialized and the file transfer is in progress.
+   */
+  UPLOADING = 1;
+  /**
+   * The file was successfully uploaded and is now being processed.
+   * I.e. the file is being converted, indexed, or otherwise prepared for use.
+   */
+  PROCESSING = 2;
+  /**
+   * The file upload and processing were completed successfully.
+   * The file is now available for use.
+   */
+  COMPLETED = 3;
+  /**
+   * The file upload or processing failed.
+   * The file is not available for use, and an error message may be provided.
+   */
+  FAILED = 4;
+  /**
+   * The file upload was canceled by the user or the system.
+   * Usually occurs when the user decides to stop the upload before it is completed, or
+   * the system determines that the upload is expired or invalid.
+   * The file is not available for use, and no further processing will occur.
+   */
+  CANCELLED = 5;
+}
+
+enum FileUploadPurpose {
+  FILE_UPLOAD_PURPOSE_UNSPECIFIED = 0;
+  // Normal, user-visible, permanent upload. This is the default for all regular
+  // user uploads (documents, generation reference images, etc.).
+  PRIMARY = 1;
+  // A transient file acting like metadata for some job. It is hidden from "My Files" and eligible for cleanup.
+  // For example, inpainting/editing mask image (the Editor "Dream" flow). It is
+  // uploaded only so generation workflows can resolve it as `InpaintParams.mask_image`;
+  SUPPORTING_METADATA = 2;
+}
+
+message FileUploadStartedInfo {
+  // ID of the file upload process
+  string file_id = 1;
+  // If the file is not uploaded till this time - it will be automatically discarded.
+  // Quota is not released for discarded files.
+  int64 upload_expired_at = 2;
+  // Minimum amount of bytes that must be sent in a single request, except the last chunk.
+  // Last chunk can be smaller than the chunkSize.
+  // We must always send full chunks. Chunks cannot be sent partially.
+  // We can send multiple chunks together (including all chunks in a single request).
+  // Example:
+  // fileSize = 1024 bytes
+  // chunkSize = 100 bytes
+  // We can send next requests:
+  // Request 1 - /upload - offset: 0, content-length: 500 (i.e. 5 chunks)
+  // Request 2 - /upload - offset: 500, content length: 524 (i.e. 6 chunks. Notice the last chunks is smaller - which is fine).
+  // Wrong! - /upload - offset: 0, content-length: 524 - this will fail because 6th chunk is not complete and it's not the last chunk.
+  int64 chunk_size = 3;
+  FileUploadType upload_type = 4;
+}
+
+message FileUploadInfo {
+  string file_id = 1;
+  int64 file_size = 2;
+  int64 uploaded_bytes = 3;
+  FileUploadStatus status = 4;
+  voplica.types.base.FileType file_type = 5;
+  voplica.types.base.MimeType mime_type = 6;
+  int64 created_at = 7;
+  int64 upload_expires_at = 8;
+  string owner_id = 9;
+  int64 chunk_size = 10;
+  FileUploadType upload_type = 11;
+  // Optional initial file name used for file upload (example: `hello.png`)
+  optional string file_name = 12;
+  // Optional error message
+  optional string message = 13;
+  // Default asset id of the uploaded file
+  // Usable only if `FileUploadStatus` is `COMPLETED`
+  optional string asset_id = 14;
+  optional voplica.types.base.AssetType asset_type = 15;
+  // Why the file was uploaded. Controls visibility in "My Files" + cleanup eligibility.
+  // Defaults to PRIMARY (normal, visible, permanent).
+  FileUploadPurpose purpose = 16;
+}

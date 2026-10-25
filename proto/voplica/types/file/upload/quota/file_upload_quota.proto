@@ -1,0 +1,79 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.file.upload.quota;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.file.upload.quota";
+option go_package = "voplica.com/types/file/upload/quota";
+option csharp_namespace = "Voplica.Types.File.Upload.Quota";
+
+enum FileUploadQuotaPlan {
+  /**
+   * By default, all users get this quota plan.
+   * The unspecified plan refers to the default plan specified by the application.
+   */
+  FILE_UPLOAD_QUOTA_PLAN_UNSPECIFIED = 0;
+  /**
+   * Base plan.
+   */
+  BASE = 1;
+  /**
+   * Increased quota limits.
+   */
+  INCREASED = 2;
+  /**
+   * More quota limits.
+   */
+  HEAVY = 3;
+  /**
+   * No limits plan. Should be used for administrative tasks only.
+   */
+  UNLIMITED = 100;
+}
+
+enum StorageEnforcementState {
+  STORAGE_ENFORCEMENT_STATE_UNSPECIFIED = 0;
+  STORAGE_ENFORCEMENT_OK = 1;
+  // Over the personal ceiling, inside the 7-day notice. Everything still works.
+  STORAGE_ENFORCEMENT_GRACE = 2;
+  // The notice elapsed: new uploads are refused and generation from the over-quota model files is
+  // refused. NOTHING IS DELETED, ever.
+  STORAGE_ENFORCEMENT_BLOCKED = 3;
+  // 30 days over: the account's over-quota model objects are tagged for the cold tier. Still not
+  // deleted; a cold object is served after a restore.
+  STORAGE_ENFORCEMENT_COLD = 4;
+}
+
+message FileUploadQuotaInfo {
+  FileUploadQuotaPlan plan = 1;
+  int64 total_storage_used = 2;
+  int64 daily_quota_used = 3;
+  int64 daily_quota_reset_timestamp = 4;
+  int64 monthly_quota_used = 5;
+  int64 monthly_quota_reset_timestamp = 6;
+  // The subset of total_storage_used that the CREATOR ALLOWANCE is currently bearing. 0 for every
+  // account that is not an approved creator - the same bytes are then inside personal_storage_used.
+  int64 creator_allowance_used = 7;
+  // The allowance itself. 0 = none (not an approved creator); otherwise the per-user value, which
+  // defaults to the configured 1 TiB and is raisable by an admin.
+  int64 creator_allowance_allowed = 8;
+  int64 personal_storage_used = 9;
+  // Epoch millis the account first went over the personal ceiling, 0 while it is under. The grace
+  // and cold clocks both run from here.
+  int64 over_quota_since = 10;
+  StorageEnforcementState enforcement = 11;
+  int64 generated_bytes_used = 12;
+  StorageEnforcementState raw_enforcement = 13;
+  int64 grace_expires_at = 14;
+}
+
+message FileUploadQuotaPlanInfo {
+  FileUploadQuotaPlan plan = 1;
+  int64 total_storage_allowed = 2;
+  int64 daily_quota_allowed = 3;
+  int64 monthly_quota_allowed = 4;
+}

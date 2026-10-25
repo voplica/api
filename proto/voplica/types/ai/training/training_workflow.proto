@@ -1,0 +1,54 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.training;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.training";
+option go_package = "voplica.com/types/ai/training";
+option csharp_namespace = "Voplica.Types.Ai.Training";
+import "voplica/types/ai/common/subject_category.proto";
+import "voplica/types/ai/dataset/dataset_preparation.proto";
+
+message ResolvedModelTrainingDataset {
+  // Stable order matching the order of `ModelTrainingConfig.training_datasets`.
+  uint32 selection_index = 1;
+  string source_dataset_id = 2;
+  // The preparation this selection resolved through, and the version that was (or will be)
+  // frozen.
+  string preparation_id = 3;
+  uint64 preparation_snapshot_version = 4;
+  string preparation_snapshot_id = 5;
+  // Resolved item filters (verbatim from the selection; the trainer passes them to
+  // `ListDatasetPreparationSnapshotItems` so filtering happens server-side).
+  repeated string source_asset_ids = 6;
+  repeated string target_keys = 7;
+  repeated voplica.types.ai.common.SubjectCategory categories = 8;
+  repeated string subject_ids = 9;
+  // File kinds the trainer requires per item.
+  repeated voplica.types.ai.dataset.PreparedFileKind required_file_kinds = 10;
+  // Which caption each frozen item contributes (UNSPECIFIED = train caption-less) and
+  // whether items lacking it fail resolution.
+  voplica.types.ai.dataset.DatasetCaptionFormat caption_format = 11;
+  bool require_captions = 12;
+  double sampling_weight = 13;
+  uint32 repeats = 14;
+  optional string subset_name = 15;
+  // Trigger words prepended to each loaded caption for this selection at training time.
+  repeated string trigger_words = 16;
+  // Number of frozen items matching the filters (computed at resolution; the trainer can
+  // sanity-check its paged stream against it).
+  uint64 resolved_items_count = 17;
+  // RESOLVED identity of what this run actually trained on: stable hash over
+  // `preparation_snapshot_id` + the filter set (`source_asset_ids`, `target_keys`,
+  // `categories`, `subject_ids`) + `caption_format` + `require_captions` +
+  // `required_file_kinds` + `sampling_weight` + `repeats` + `subset_name`.
+  // Complements the intent-level `ModelTrainingDataset.data_selection_fingerprint`.
+  string resolved_selection_fingerprint = 18;
+  string dataset_owner_id = 19;
+  bool revenue_share_eligible = 20;
+  string root_dataset_id = 21;
+}

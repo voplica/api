@@ -1,0 +1,14 @@
+# The package's sources (src/, never committed) from the published protos: protobuf-es messages, enums and service
+# descriptors, which Connect v2 clients read directly. ESM for Node: relative imports end in `.js`.
+version: v2
+# src/ holds only what this run generates: a module left from an earlier run would enter the barrel.
+clean: true
+inputs:
+  - directory: ../../proto
+plugins:
+  - local: protoc-gen-es
+    out: src
+    include_imports: true
+    opt:
+      - target=ts
+      - import_extension=js

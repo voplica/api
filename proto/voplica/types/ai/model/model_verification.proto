@@ -1,0 +1,78 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.model;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.model";
+option go_package = "voplica.com/types/ai/model";
+option csharp_namespace = "Voplica.Types.Ai.Model";
+import "voplica/types/ai/common/model_family_type.proto";
+import "voplica/types/ai/common/d_type.proto";
+import "voplica/types/ai/common/quantization_type.proto";
+import "voplica/types/ai/common/model_file_structure.proto";
+import "voplica/types/file/files.proto";
+
+// What the uploaded weight files ARE, as detected from the bytes.
+enum ModelWeightsKind {
+  MODEL_WEIGHTS_KIND_UNSPECIFIED = 0;
+  FULL_MODEL_WEIGHTS = 1; // full pipeline weights (single-file or diffusers directory)
+  TRANSFORMER_ONLY_WEIGHTS = 2; // diffusion transformer/unet only - needs donor components
+  LORA_WEIGHTS = 3;
+  CONTROLNET_WEIGHTS = 4;
+  VAE_WEIGHTS = 5;
+  UNKNOWN_WEIGHTS = 6;
+  TEXT_ENCODER_WEIGHTS = 7; // a standalone CLIP / T5 / Qwen3 / Llama text encoder
+}
+
+enum ModelFilesVerificationMethod {
+  MODEL_FILES_VERIFICATION_METHOD_UNSPECIFIED = 0;
+  STATIC_INSPECTION = 1; // header/structure analysis only
+  STATIC_AND_INFERENCE_SMOKE_TEST = 2; // static analysis plus a minimal GPU inference run
+}
+
+message VerifiedModelFileInfo {
+  string file_id = 1;
+  voplica.types.file.ModelGenInfo model_gen_info = 2; // now carries role + component_name
+  optional uint64 file_size_bytes = 3;
+  optional uint32 tensor_count = 4;
+  // What THIS file is, learned from its tensors (detected_kind stays the PRIMARY's kind).
+  ModelWeightsKind kind = 5;
+  // Free text: "comfy_quant float8, 112 layers", "convrot", "ignored: no loader for this
+  // companion", ...
+  repeated string notes = 6;
+  optional string content_sha256 = 7;
+}
+
+message ModelFilesVerificationReport {
+  ModelFilesVerificationMethod method = 1;
+  ModelWeightsKind detected_kind = 2;
+  // Architecture-level detection; UNSPECIFIED when the bytes are ambiguous.
+  voplica.types.ai.common.ModelFamily detected_family = 3;
+  bool family_matches_declared = 4;
+  voplica.types.ai.common.DType primary_dtype = 5;
+  voplica.types.ai.common.QuantizationType primary_quantization = 6;
+  voplica.types.ai.common.ModelFileStructure primary_file_structure = 7;
+  optional uint32 lora_rank = 8;
+  optional float lora_alpha = 9;
+  // From embedded training metadata when present (e.g. ai-toolkit ss_base_model_version)
+  optional string declared_base_model = 10;
+  optional string training_software = 11;
+  repeated VerifiedModelFileInfo files = 12;
+  repeated string warnings = 13;
+  optional uint64 total_size_bytes = 14;
+  optional uint64 smoke_test_duration_ms = 15;
+  // Slots the family needs that this file set does NOT supply - they come from the base/donor
+  // variant ("text_encoder", "vae", ...).
+  repeated string donor_components = 16;
+  // File ids the loader will not use; the reason is on that file's VerifiedModelFileInfo.notes.
+  repeated string ignored_files = 17;
+  // One-line human summary of how the set loads, e.g. "transformer: file A (comfy_quant float8
+  // -> bf16), vae: file B, text_encoder: base FLUX.2-klein-9B".
+  string load_recipe = 18;
+  // True when every component_slots entry of the family is satisfied by the set itself.
+  bool component_set_complete = 19;
+}

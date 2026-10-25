@@ -1,0 +1,73 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.base;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.base";
+option go_package = "voplica.com/types/base";
+option csharp_namespace = "Voplica.Types.Base";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
+
+enum ParamDataType {
+  PARAM_DATA_TYPE_UNSPECIFIED = 0;
+  // Scalar data types
+  STRING = 1;
+  INT32 = 2;
+  INT64 = 3;
+  FLOAT = 4;
+  DOUBLE = 5;
+  BOOL = 6;
+  BYTES = 7;
+  // Non-scalar data types
+  TIMESTAMP = 20;
+  STRUCT = 21; // google.protobuf.Struct (JSON object)
+  ANY_MESSAGE = 22; // google.protobuf.Any (arbitrary message)
+  ANY_ENUM = 23; // arbitrary enum value
+  NULL = 24; // google.protobuf.NullValue (null value)
+}
+
+message ParamValue {
+  oneof value {
+    // Scalar values
+    string string_value = 1;
+    int32 int32_value = 2; // Int can be used to provide arbitrary enum values. The target enum type is inferred from the parameter data type.
+    int64 int64_value = 3;
+    float float_value = 4;
+    double double_value = 5;
+    bool bool_value = 6;
+    bytes bytes_value = 7; // Bytes can be used to provide arbitrary messages. The target type is inferred from the parameter data type.
+    // Non-scalars
+    google.protobuf.Timestamp timestamp_value = 20;
+    google.protobuf.Struct struct_value = 21;
+    google.protobuf.Any any_message_value = 22; // any_message_value can used to provide arbitrary messages with selected type
+    AnyEnumParamValue any_enum_value = 23; // any_enum_value can used to provide arbitrary enum values with selected type
+    google.protobuf.NullValue null_value = 24;
+  }
+}
+
+message AnyEnumParamValue {
+  int32 number = 1;
+  string type_url = 2;
+}
+
+message NestedParamValue {
+  oneof value {
+    ParamValue literal = 1;
+    NestedMapParamValue map_literal = 2;
+    NestedListParamValue list_literal = 3;
+  }
+}
+
+message NestedMapParamValue {
+  map<string, NestedParamValue> map = 1;
+}
+
+message NestedListParamValue {
+  repeated NestedParamValue values = 2;
+}

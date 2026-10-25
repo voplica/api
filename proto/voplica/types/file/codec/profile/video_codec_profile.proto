@@ -1,0 +1,138 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.file.codec.profile;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.file.codec.profile";
+option go_package = "voplica.com/types/file/codec/profile";
+option csharp_namespace = "Voplica.Types.File.Codec.Profile";
+import "google/protobuf/descriptor.proto";
+import "voplica/types/file/codec/video_codec.proto";
+extend google.protobuf.EnumValueOptions {
+  optional VideoCodecProfileExtension video_codec_profile_extension = 50121;
+  optional VideoCodecLevelExtension video_codec_level_extension = 50122;
+}
+
+message VideoCodecLevelExtension {
+  string level = 1;
+  VideoCodecType codec = 2;
+  int32 idc = 3;
+}
+
+message VideoCodecProfileExtension {
+  string name = 1;
+  VideoCodecType codec = 2;
+  optional int32 bit = 3;
+  optional sint32 version = 4;
+}
+
+enum VideoCodecLevelType {
+  VIDEO_CODEC_LEVEL_TYPE_UNSPECIFIED = 0 [(video_codec_level_extension) = { level: "unspecified", codec: VIDEO_CODEC_TYPE_UNSPECIFIED }];
+  /**
+  H264
+  */
+  CODEC_LEVEL_H264_1 = 100 [(video_codec_level_extension) = { level: "1", idc: 1, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_1_1 = 101 [(video_codec_level_extension) = { level: "1.1", idc: 11, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_1_2 = 102 [(video_codec_level_extension) = { level: "1.2", idc: 12, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_1_3 = 103 [(video_codec_level_extension) = { level: "1.3", idc: 13, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_2 = 104 [(video_codec_level_extension) = { level: "2", idc: 2, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_2_1 = 105 [(video_codec_level_extension) = { level: "2.1", idc: 21, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_2_2 = 106 [(video_codec_level_extension) = { level: "2.2", idc: 22, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_3 = 107 [(video_codec_level_extension) = { level: "3", idc: 3, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_3_1 = 108 [(video_codec_level_extension) = { level: "3.1", idc: 31, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_3_2 = 109 [(video_codec_level_extension) = { level: "3.2", idc: 32, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_4 = 110 [(video_codec_level_extension) = { level: "4", idc: 4, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_4_1 = 111 [(video_codec_level_extension) = { level: "4.1", idc: 41, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_4_2 = 112 [(video_codec_level_extension) = { level: "4.2", idc: 42, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_5 = 113 [(video_codec_level_extension) = { level: "5", idc: 5, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_5_1 = 114 [(video_codec_level_extension) = { level: "5.1", idc: 51, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_5_2 = 115 [(video_codec_level_extension) = { level: "5.2", idc: 52, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_6 = 116 [(video_codec_level_extension) = { level: "6", idc: 6, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_6_1 = 117 [(video_codec_level_extension) = { level: "6.1", idc: 61, codec: VIDEO_CODEC_H264 }];
+  CODEC_LEVEL_H264_6_2 = 118 [(video_codec_level_extension) = { level: "6.2", idc: 62, codec: VIDEO_CODEC_H264 }];
+  /**
+  H265
+  */
+  CODEC_LEVEL_H265_1 = 200 [(video_codec_level_extension) = { level: "1", idc: 1, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_2 = 201 [(video_codec_level_extension) = { level: "2", idc: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_2_1 = 202 [(video_codec_level_extension) = { level: "2.1", idc: 21, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_3 = 203 [(video_codec_level_extension) = { level: "3", idc: 3, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_3_1 = 204 [(video_codec_level_extension) = { level: "3.1", idc: 31, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_4 = 205 [(video_codec_level_extension) = { level: "4", idc: 4, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_4_1 = 206 [(video_codec_level_extension) = { level: "4.1", idc: 41, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_5 = 207 [(video_codec_level_extension) = { level: "5", idc: 5, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_5_1 = 208 [(video_codec_level_extension) = { level: "5.1", idc: 51, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_5_2 = 209 [(video_codec_level_extension) = { level: "5.2", idc: 52, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_6 = 210 [(video_codec_level_extension) = { level: "6", idc: 6, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_6_1 = 211 [(video_codec_level_extension) = { level: "6.1", idc: 61, codec: VIDEO_CODEC_H265 }];
+  CODEC_LEVEL_H265_6_2 = 212 [(video_codec_level_extension) = { level: "6.2", idc: 62, codec: VIDEO_CODEC_H265 }];
+  /**
+  VP9
+  */
+  CODEC_LEVEL_VP9_1 = 300 [(video_codec_level_extension) = { level: "1", idc: 1, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_1_1 = 301 [(video_codec_level_extension) = { level: "1.1", idc: 11, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_2 = 302 [(video_codec_level_extension) = { level: "2", idc: 2, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_2_1 = 303 [(video_codec_level_extension) = { level: "2.1", idc: 21, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_3 = 304 [(video_codec_level_extension) = { level: "3", idc: 3, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_3_1 = 305 [(video_codec_level_extension) = { level: "3.1", idc: 31, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_4 = 306 [(video_codec_level_extension) = { level: "4", idc: 4, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_4_1 = 307 [(video_codec_level_extension) = { level: "4.1", idc: 41, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_5 = 308 [(video_codec_level_extension) = { level: "5", idc: 5, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_5_1 = 309 [(video_codec_level_extension) = { level: "5.1", idc: 51, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_5_2 = 310 [(video_codec_level_extension) = { level: "5.2", idc: 52, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_6 = 311 [(video_codec_level_extension) = { level: "6", idc: 6, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_6_1 = 312 [(video_codec_level_extension) = { level: "6.1", idc: 61, codec: VIDEO_CODEC_VP9 }];
+  CODEC_LEVEL_VP9_6_2 = 313 [(video_codec_level_extension) = { level: "6.2", idc: 62, codec: VIDEO_CODEC_VP9 }];
+}
+
+enum VideoCodecProfileType {
+  VIDEO_CODEC_PROFILE_TYPE_UNSPECIFIED = 0 [(video_codec_profile_extension) = { name: "unspecified", codec: VIDEO_CODEC_TYPE_UNSPECIFIED }];
+  /**
+  H264
+  */
+  CODEC_PROFILE_H264_BASELINE = 100 [(video_codec_profile_extension) = { name: "baseline", codec: VIDEO_CODEC_H264 }];
+  CODEC_PROFILE_H264_MAIN = 101 [(video_codec_profile_extension) = { name: "main", codec: VIDEO_CODEC_H264 }];
+  CODEC_PROFILE_H264_HIGH = 102 [(video_codec_profile_extension) = { name: "high", codec: VIDEO_CODEC_H264 }];
+  CODEC_PROFILE_H264_HIGH_10 = 103 [(video_codec_profile_extension) = { name: "high10", codec: VIDEO_CODEC_H264 }];
+  CODEC_PROFILE_H264_HIGH_422 = 104 [(video_codec_profile_extension) = { name: "high422", codec: VIDEO_CODEC_H264 }];
+  CODEC_PROFILE_H264_HIGH_444 = 105 [(video_codec_profile_extension) = { name: "high444", codec: VIDEO_CODEC_H264 }];
+  /**
+  H265
+  */
+  CODEC_PROFILE_H265_MAIN = 200 [(video_codec_profile_extension) = { name: "main", bit: 8, version: 1, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_INTRA = 201 [(video_codec_profile_extension) = { name: "main-intra", bit: 8, version: -1, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MSP = 202 [(video_codec_profile_extension) = { name: "msp", bit: 8, version: 1, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_444_8 = 203 [(video_codec_profile_extension) = { name: "main444-8", bit: 8, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_444_INTRA = 204 [(video_codec_profile_extension) = { name: "main444-intra", bit: 8, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_444_STILLPICTURE = 205 [(video_codec_profile_extension) = { name: "main444-stillpicture", bit: 8, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_10 = 206 [(video_codec_profile_extension) = { name: "main10", bit: 10, version: 1, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_10_INTRA = 207 [(video_codec_profile_extension) = { name: "main10-intra", bit: 10, version: -1, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_422_10 = 208 [(video_codec_profile_extension) = { name: "main422-10", bit: 10, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_422_10_INTRA = 209 [(video_codec_profile_extension) = { name: "main422-10-intra", bit: 10, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_444_10 = 210 [(video_codec_profile_extension) = { name: "main444-10", bit: 10, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_444_10_INTRA = 211 [(video_codec_profile_extension) = { name: "main444-10-intra", bit: 10, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_12 = 212 [(video_codec_profile_extension) = { name: "main12", bit: 12, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_12_INTRA = 213 [(video_codec_profile_extension) = { name: "main12-intra", bit: 12, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_422_12 = 214 [(video_codec_profile_extension) = { name: "main422-12", bit: 12, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_422_12_INTRA = 215 [(video_codec_profile_extension) = { name: "main422-12-intra", bit: 12, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_444_12 = 216 [(video_codec_profile_extension) = { name: "main444-12", bit: 12, version: 2, codec: VIDEO_CODEC_H265 }];
+  CODEC_PROFILE_H265_MAIN_444_12_INTRA = 217 [(video_codec_profile_extension) = { name: "main444-12-intra", bit: 12, version: 2, codec: VIDEO_CODEC_H265 }];
+  /**
+  VP8
+  */
+  CODEC_PROFILE_VP8_0 = 300 [(video_codec_profile_extension) = { name: "0", codec: VIDEO_CODEC_VP8 }];
+  CODEC_PROFILE_VP8_1 = 301 [(video_codec_profile_extension) = { name: "1", codec: VIDEO_CODEC_VP8 }];
+  CODEC_PROFILE_VP8_2 = 302 [(video_codec_profile_extension) = { name: "2", codec: VIDEO_CODEC_VP8 }];
+  CODEC_PROFILE_VP8_3 = 303 [(video_codec_profile_extension) = { name: "3", codec: VIDEO_CODEC_VP8 }];
+  /**
+  VP9
+  */
+  CODEC_PROFILE_VP9_0 = 400 [(video_codec_profile_extension) = { name: "0", codec: VIDEO_CODEC_VP9 }];
+  CODEC_PROFILE_VP9_1 = 401 [(video_codec_profile_extension) = { name: "1", codec: VIDEO_CODEC_VP9 }];
+  CODEC_PROFILE_VP9_2 = 402 [(video_codec_profile_extension) = { name: "2", codec: VIDEO_CODEC_VP9 }];
+  CODEC_PROFILE_VP9_3 = 403 [(video_codec_profile_extension) = { name: "3", codec: VIDEO_CODEC_VP9 }];
+}

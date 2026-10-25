@@ -1,0 +1,177 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.file.convert;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.file.convert";
+option go_package = "voplica.com/types/file/convert";
+option csharp_namespace = "Voplica.Types.File.Convert";
+import "voplica/types/base/param.proto";
+import "voplica/types/base/file_type.proto";
+import "voplica/types/base/content_presentation_type.proto";
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.EnumValueOptions {
+  optional ConvertParamExtension convert_param_extension = 50004;
+  optional ConvertFlowExtension convert_flow_extension = 50005;
+}
+
+message ConvertParamExtension {
+  string name = 1;
+  voplica.types.base.ParamDataType data_type = 2;
+}
+
+message ConvertFlowExtension {
+  repeated ConvertParamType required_params = 1;
+  repeated voplica.types.base.FileType supported_source_file_types = 2;
+  // Marks the flow as auto-triggered for any file types - regardless if the user used this flow or not.
+  // Usually this should be empty except for default convert flows (i.e. `<type>_DEFAULT`).
+  repeated voplica.types.base.FileType auto_applicable_for_file_types = 3;
+  // If this flow was triggered not explicitly by the user, but by auto-apply logic, then
+  // this list specifies what convert parameters should used from those provided by the user.
+  // Usually this should be equal to `required_params` (mostly empty for default flows)
+  repeated ConvertParamType auto_proxied_params = 4;
+  // If presentation type is not specified explicitly then this one will be used for the converted file
+  voplica.types.base.ContentPresentationType default_presentation_type = 5;
+  bool user_trigger_allowed = 6;
+  repeated ConvertParamType optional_params = 7;
+}
+
+message ConvertParam {
+  ConvertParamType param_key = 1;
+  voplica.types.base.ParamValue param_value = 2;
+}
+
+// All supported parameters that may be used in convert commands
+enum ConvertParamType {
+  CONVERT_PARAM_TYPE_UNSPECIFIED = 0 [(convert_param_extension) = { name: "unspecified", data_type: PARAM_DATA_TYPE_UNSPECIFIED }];
+  X = 1 [(convert_param_extension) = { name: "X", data_type: INT32 }];
+  Y = 2 [(convert_param_extension) = { name: "Y", data_type: INT32 }];
+  WIDTH = 3 [(convert_param_extension) = { name: "WIDTH", data_type: INT32 }];
+  HEIGHT = 4 [(convert_param_extension) = { name: "HEIGHT", data_type: INT32 }];
+  SIDE_LENGTH = 5 [(convert_param_extension) = { name: "SIDE_LENGTH", data_type: INT32 }];
+  THREADS = 100 [(convert_param_extension) = { name: "THREADS", data_type: INT32 }];
+  BITRATE = 101 [(convert_param_extension) = { name: "BITRATE", data_type: STRING }];
+  CHANNELS_COUNT = 102 [(convert_param_extension) = { name: "CHANNELS_COUNT", data_type: INT32 }];
+  AUDIO_SAMPLE_RATE = 201 [(convert_param_extension) = { name: "AUDIO_SAMPLE_RATE", data_type: INT32 }];
+  AUDIO_MI = 202 [(convert_param_extension) = { name: "AUDIO_MI", data_type: STRING }];
+  AUDIO_MLRA = 203 [(convert_param_extension) = { name: "AUDIO_MLRA", data_type: STRING }];
+  AUDIO_MTP = 204 [(convert_param_extension) = { name: "AUDIO_MTP", data_type: STRING }];
+  AUDIO_MTH = 205 [(convert_param_extension) = { name: "AUDIO_MTH", data_type: STRING }];
+  AUDIO_OFFSET = 206 [(convert_param_extension) = { name: "AUDIO_OFFSET", data_type: STRING }];
+  AUDIO_INPUT = 207 [(convert_param_extension) = { name: "AUDIO_INPUT", data_type: STRING }];
+  AUDIO_APPLY_DOUBLE_PASS_LOUDNORM = 208 [(convert_param_extension) = { name: "AUDIO_APPLY_DOUBLE_PASS_LOUDNORM", data_type: INT32 }];
+  // Silence duration (ms) inserted between concatenated segments for AUDIO_SEGMENT_CONCAT. 0 = no gap (immediate concatenation).
+  AUDIO_SEGMENT_GAP_MS = 209 [(convert_param_extension) = { name: "AUDIO_SEGMENT_GAP_MS", data_type: INT32 }];
+  // Sidechain ducking depth (dB) applied to the background bed under the voice-over track for AUDIO_MIX_VOICE_OVER_BED. 0 = no ducking.
+  AUDIO_DUCKING_LEVEL_DB = 210 [(convert_param_extension) = { name: "AUDIO_DUCKING_LEVEL_DB", data_type: DOUBLE }];
+  VIDEO_SAVE_EXTERNAL_AUDIO = 301 [(convert_param_extension) = { name: "VIDEO_SAVE_EXTERNAL_AUDIO", data_type: BOOL }];
+  VIDEO_FPS = 302 [(convert_param_extension) = { name: "VIDEO_FPS", data_type: DOUBLE }];
+  VIDEO_GOP = 303 [(convert_param_extension) = { name: "VIDEO_GOP", data_type: INT32 }];
+  VIDEO_INPUT = 304 [(convert_param_extension) = { name: "VIDEO_INPUT", data_type: STRING }];
+  // Exact target duration (ms) for VIDEO_TRIM_EXACT. Trim-only: if the target meets or exceeds
+  // the source duration, the source passes through unchanged (no padding). Callers are expected
+  // to guarantee target <= source duration.
+  VIDEO_TRIM_DURATION_MS = 305 [(convert_param_extension) = { name: "VIDEO_TRIM_DURATION_MS", data_type: INT64 }];
+  MODEL_GEN_FAMILY_TYPE_ID = 401 [(convert_param_extension) = { name: "MODEL_GEN_FAMILY_TYPE_ID", data_type: INT32 }];
+  MODEL_GEN_TYPE_ID = 402 [(convert_param_extension) = { name: "MODEL_GEN_TYPE_ID", data_type: INT32 }];
+  MODEL_GEN_FILE_STRUCTURE_ID = 403 [(convert_param_extension) = { name: "MODEL_GEN_FILE_STRUCTURE_ID", data_type: INT32 }];
+  MODEL_GEN_DTYPE_ID = 404 [(convert_param_extension) = { name: "MODEL_GEN_DTYPE_ID", data_type: INT32 }];
+  MODEL_GEN_QUANTIZATION_TYPE_ID = 405 [(convert_param_extension) = { name: "MODEL_GEN_QUANTIZATION_TYPE_ID", data_type: INT32 }];
+  // voplica.types.ai.common.ModelFileRole NUMBER. Optional on MODEL_GEN_ASSET_ATTACH:
+  // absent == MODEL_FILE_ROLE_UNSPECIFIED.
+  MODEL_GEN_ROLE_ID = 406 [(convert_param_extension) = { name: "MODEL_GEN_ROLE_ID", data_type: INT32 }];
+  // Diffusers slot name ("transformer", "vae", "text_encoder", "text_encoder_2", ...).
+  // Optional on MODEL_GEN_ASSET_ATTACH: absent == "".
+  MODEL_GEN_COMPONENT_NAME = 407 [(convert_param_extension) = { name: "MODEL_GEN_COMPONENT_NAME", data_type: STRING }];
+  // DPI for rasterizing vector graphics (e.g. 72, 150, 300)
+  VECTOR_GRAPHIC_DPI = 501 [(convert_param_extension) = { name: "VECTOR_GRAPHIC_DPI", data_type: INT32 }];
+}
+
+// This type is used for conversion services to determine how to convert files
+enum ConvertFlowType {
+  CONVERT_FLOW_TYPE_UNSPECIFIED = 0 [(convert_flow_extension) = { default_presentation_type: CONTENT_PRESENTATION_TYPE_UNSPECIFIED }];
+  OBJECT_DEFAULT = 1 [(convert_flow_extension) = { supported_source_file_types: [GENERAL_FILE, IMAGE_FILE, VIDEO_FILE, AUDIO_FILE, MODEL_GEN_FILE, MODEL_3D_FILE, VECTOR_GRAPHIC_FILE, TEXT_FILE, SUBTITLES_FILE], default_presentation_type: OBJECT_DEFAULT, user_trigger_allowed: true }];
+  // Default flow for images.
+  // It will create multiple resolutions in jpeg and webp formats for the same image preserving aspect ratio.
+  IMAGE_DEFAULT = 1000 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [IMAGE_FILE], auto_applicable_for_file_types: [IMAGE_FILE], auto_proxied_params: [], default_presentation_type: IMAGE_DEFAULT, user_trigger_allowed: true }];
+  // User / Character avatar image. Creates multiple jpeg and webp square images.
+  // X - from where to crop on X axis
+  // Y - from where to crop on Y axis
+  // SIDE_LENGTH - length of square sides (used both for width and height)
+  IMAGE_PROFILE_AVATAR = 1001 [(convert_flow_extension) = { required_params: [X, Y, SIDE_LENGTH], supported_source_file_types: [IMAGE_FILE], default_presentation_type: IMAGE_AVATAR, user_trigger_allowed: true }];
+  // Profile banner image. Creates multiple jpeg and webp with wide horizontal images of 4/1 aspect ratios.
+  // X - from where to crop on X axis
+  // Y - from where to crop on Y axis
+  // WIDTH - width length to crop
+  // HEIGHT - height length to crop
+  IMAGE_PROFILE_BANNER = 1002 [(convert_flow_extension) = { required_params: [X, Y, WIDTH, HEIGHT], supported_source_file_types: [IMAGE_FILE], default_presentation_type: IMAGE_BANNER, user_trigger_allowed: true }];
+  // (unused for now) Vertical images.
+  // Creates multiple jpeg and webp vertical images of 4/5 and 9/16 aspect ratios.
+  // X - from where to crop on X axis
+  // Y - from where to crop on Y axis
+  // WIDTH - width length to crop
+  // HEIGHT - height length to crop
+  IMAGE_VERTICAL_VIEW = 1003 [(convert_flow_extension) = { required_params: [X, Y, WIDTH, HEIGHT], supported_source_file_types: [IMAGE_FILE], default_presentation_type: IMAGE_VERTICAL }];
+  /**
+  Video convert flows
+  */
+  // Uses `VIDEO_STREAM_ONLY` to retrieve necessary video streams.
+  // Tries to get audio from the provided audio file OR fallbacks to finding the first audio stream from
+  // the video file.
+  // If audio is found
+  VIDEO_DEFAULT = 2000 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [VIDEO_FILE, AUDIO_FILE], auto_applicable_for_file_types: [VIDEO_FILE], auto_proxied_params: [], default_presentation_type: VIDEO_DEFAULT, user_trigger_allowed: true }];
+  // Extracts the first video stream from the video, converts video stream with necessary codecs, discards everything else.
+  VIDEO_STREAM_EXTRACTION = 2001 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [VIDEO_FILE], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: VIDEO_DEFAULT }];
+  // Extracts the first video stream from the video, converts video stream with necessary codecs, discards everything else.
+  VIDEO_DEFAULT_THUMBNAIL_EXTRACTION = 2002 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [VIDEO_FILE], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: IMAGE_VIDEO_DEFAULT_THUMBNAIL }];
+  VIDEO_CONCAT = 2003 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [VIDEO_FILE], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: VIDEO_DEFAULT }];
+  // Trims the source down to the exact target duration (VIDEO_TRIM_DURATION_MS), frame-accurate
+  // re-encode when needed. If the target meets or exceeds the source duration, the source passes
+  // through unchanged - no padding is performed. Trim-only by design: callers (e.g. the long-form
+  // video director) are expected to guarantee target <= source, for example by rounding requested
+  // clip frames up rather than down.
+  VIDEO_TRIM_EXACT = 2004 [(convert_flow_extension) = { required_params: [VIDEO_TRIM_DURATION_MS], supported_source_file_types: [VIDEO_FILE], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: VIDEO_DEFAULT }];
+  VIDEO_EXTRACT_LAST_FRAME = 2005 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [VIDEO_FILE], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: IMAGE_VIDEO_DEFAULT_THUMBNAIL }];
+  // Mixes a voice/speech track over a video's own audio bed (sidechain duck + mix + loudnorm) and
+  // remuxes the result onto the video stream. Inputs: source_file_ids[0] = the video,
+  // source_file_ids[1] = the voice audio. Output is a video with the mixed track; the video stream
+  // is copied untouched. Internal-only.
+  VIDEO_MIX_VOICE_OVER_BED = 2006 [(convert_flow_extension) = { required_params: [AUDIO_DUCKING_LEVEL_DB], supported_source_file_types: [VIDEO_FILE, AUDIO_FILE], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: VIDEO_DEFAULT }];
+  /**
+  Audio convert flows
+  */
+  AUDIO_DEFAULT = 3000 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [AUDIO_FILE, VIDEO_FILE], auto_applicable_for_file_types: [AUDIO_FILE], auto_proxied_params: [], default_presentation_type: AUDIO_DEFAULT, user_trigger_allowed: true }];
+  /**
+  Extracts audio stream from audio or video and converts it using proper codecs
+  */
+  AUDIO_STREAM_EXTRACTION = 3001 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [AUDIO_FILE, VIDEO_FILE], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: AUDIO_DEFAULT }];
+  AUDIO_MIX_VOICE_OVER_BED = 3002 [(convert_flow_extension) = { required_params: [AUDIO_DUCKING_LEVEL_DB], supported_source_file_types: [AUDIO_FILE], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: AUDIO_DEFAULT }];
+  AUDIO_SEGMENT_CONCAT = 3003 [(convert_flow_extension) = { required_params: [AUDIO_SEGMENT_GAP_MS], supported_source_file_types: [AUDIO_FILE], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: AUDIO_DEFAULT }];
+  /**
+  Text convert flows
+  */
+  TEXT_DEFAULT = 4000 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [TEXT_FILE], auto_applicable_for_file_types: [TEXT_FILE], auto_proxied_params: [], default_presentation_type: TEXT_DEFAULT }];
+  /**
+  3D model convert flows
+  */
+  MODEL_3D_DEFAULT = 5000 [(convert_flow_extension) = { required_params: [] }];
+  /**
+  Simply attaches model file to the Asset of the File Upload process
+  */
+  MODEL_GEN_ASSET_ATTACH = 6000 [(convert_flow_extension) = { required_params: [MODEL_GEN_FILE_STRUCTURE_ID, MODEL_GEN_DTYPE_ID, MODEL_GEN_QUANTIZATION_TYPE_ID], optional_params: [MODEL_GEN_ROLE_ID, MODEL_GEN_COMPONENT_NAME], supported_source_file_types: [MODEL_GEN_FILE, GENERAL_FILE, FILE_TYPE_UNSPECIFIED], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: MODEL_GEN_DEFAULT, user_trigger_allowed: true }];
+  /**
+  LoRa image model convert flows
+  */
+  MODEL_GEN_IMAGE_BASE_DEFAULT = 7000 [(convert_flow_extension) = { required_params: [] }];
+  // Default flow for vector graphics.
+  // Preserves the original vector file and creates rasterized preview images in multiple resolutions (png, jpeg and webp).
+  // Supports SVG, EPS, WMF, EMF, CDR, AI and PDF as source formats.
+  VECTOR_GRAPHIC_DEFAULT = 8000 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [VECTOR_GRAPHIC_FILE], auto_applicable_for_file_types: [VECTOR_GRAPHIC_FILE], auto_proxied_params: [], default_presentation_type: VECTOR_GRAPHIC_DEFAULT, user_trigger_allowed: true }];
+  // Rasterizes a vector graphic into multiple image resolutions (jpeg and webp).
+  // Optional VECTOR_GRAPHIC_DPI parameter controls rasterization density (defaults to service-defined value if not provided).
+  VECTOR_GRAPHIC_RASTERIZE = 8001 [(convert_flow_extension) = { required_params: [], supported_source_file_types: [VECTOR_GRAPHIC_FILE], auto_applicable_for_file_types: [], auto_proxied_params: [], default_presentation_type: VECTOR_GRAPHIC_RASTERIZED_PREVIEW }];
+}

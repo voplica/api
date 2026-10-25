@@ -1,0 +1,333 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.ai.model;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.ai.model";
+option go_package = "voplica.com/api/ai/model";
+option csharp_namespace = "Voplica.Api.Ai.Model";
+import "voplica/auth.proto";
+import "voplica/types/ai/model/model.proto";
+import "voplica/types/ai/common/model_family_type.proto";
+import "voplica/types/ai/common/controlnet_type.proto";
+import "voplica/types/ai/common/model_affinity.proto";
+import "voplica/types/base/publish_status.proto";
+import "voplica/types/subscription/studio_subscription_type.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/base/file_type.proto";
+
+message CreateModelVariantRequest {
+  string parent_model_id = 1;
+  // Model version name
+  string variant_name = 2;
+  // Minimum subscription level the user should have to use this model
+  voplica.types.subscription.StudioSubscriptionType min_required_subscription = 3;
+  // If enabled, this model becomes eligible for revenue sharing. Absent ⇒ defaults from the
+  // parent model's `revenue_sharing_preferred`.
+  optional bool revenue_share = 4;
+  // If `true` anyone who can use the model will also be able to download model files.
+  // If `false` nobody will be able to download the model.
+  bool download_allowed = 5;
+  voplica.types.ai.common.ModelFamily model_family = 6;
+  repeated string trigger_words = 7;
+  // Allows taking missing model variant files from another model variant.
+  // Useful when the model variant ships transformer weights only, but needs text encoder, vae, and other parts from
+  // a base model.
+  // Useful not to upload duplicate model files.
+  optional string based_on_model_variant_id = 8;
+}
+
+message CreateModelVariantResponse {
+  string id = 1;
+  // ID of the Asset that should be used to upload Files of the Model Variant.
+  // The Asset will be unlocked for user's modifications.
+  // When all files are uploaded, the user should call `TriggerModelVariantVerification` to lock the asset and
+  // verify that asset variant files are valid for inference and / or models training.
+  string asset_id = 2;
+}
+
+message GetModelVariantRequest {
+  oneof attribute {
+    string id = 1;
+    string idempotency_key = 2;
+  }
+  ModelVariantFieldsFetchingOptions fields_fetching_options = 3;
+}
+
+message ModelVariantFieldsFetchingOptions {
+  // If provided, the found file variant groups will be returned for the default preview asset
+  optional voplica.types.file.FilesRetriever default_preview_retriever = 1;
+}
+
+message GetModelVariantResponse {
+  voplica.types.ai.model.ModelVariant model_variant = 1;
+}
+
+message GetRecommendedBaseModelVariantRequest {
+  // If provided it will return only model that is compatible with lora of this model family
+  optional voplica.types.ai.common.ModelFamily compatible_lora_model_family = 1;
+  // If specific it will return recommended model that can produce this output type
+  optional voplica.types.base.FileType output_file_type = 2;
+}
+
+message GetRecommendedBaseModelVariantResponse {
+  optional voplica.types.ai.model.ModelVariant model_variant = 1;
+}
+
+message GetRecommendedControlNetModelVariantRequest {
+  // If provided returns controlnet that is compatible with this model family
+  optional voplica.types.ai.common.ModelFamily base_model_family_compatibility = 1;
+  optional voplica.types.ai.common.ControlnetType controlnet_type = 2;
+}
+
+message GetRecommendedControlNetModelVariantResponse {
+  optional voplica.types.ai.model.ModelVariant model_variant = 1;
+}
+
+message GetMultiModelVariantRequest {
+  repeated string ids = 1;
+  bool with_parent = 2;
+  bool with_metadata = 3;
+}
+
+message ModelVariantWithParentModel {
+  voplica.types.ai.model.ModelVariant model_variant = 1;
+  optional voplica.types.ai.model.GenModel parent_model = 2;
+  optional voplica.types.ai.model.GenModelVariantMetadata model_variant_metadata = 3;
+  // Populated only for the owner.
+  optional bool revenue_share_eligible = 4;
+}
+
+message GetMultiModelVariantResponse {
+  repeated ModelVariantWithParentModel model_pairs = 1;
+}
+
+message GetModelVariantMetadataRequest {
+  string id = 1;
+}
+
+message GetModelVariantMetadataResponse {
+  voplica.types.ai.model.GenModelVariantMetadata model_variant_metadata = 1;
+}
+
+message UpdateModelVariantRequest {
+  string model_variant_id = 1;
+  optional string variant_name = 2;
+  optional voplica.types.subscription.StudioSubscriptionType min_required_subscription = 3;
+  optional bool revenue_share = 4;
+  optional bool download_allowed = 5;
+  optional voplica.types.ai.common.ModelFamily model_family = 6;
+  // Trigger words are always provided during an update. An empty list means unchanged; set `clear_trigger_words` to
+  // remove every trigger word.
+  repeated string trigger_words = 7;
+  optional voplica.types.file.AssetSelectionStrategy default_preview = 8;
+  // An empty string removes `based_on_model_variant_id` from the model variant.
+  optional string based_on_model_variant_id = 9;
+  // Remove every trigger word. A plain bool, not `optional`: absent and false are the SAME
+  // instruction ("leave the trigger words alone"), so an optional wrapper would invite a third
+  // state with no meaning (same reasoning as `GetMultiModelVariantRequest.with_parent`).
+  // Sending `clear_trigger_words = true` together with a non-empty `trigger_words` is a
+  // contradiction and is refused with INVALID_ARGUMENT rather than silently resolved.
+  bool clear_trigger_words = 10;
+  // The manual raw / step-distilled declaration (see `ModelVariantSamplingRegime`). Absent leaves it as it is,
+  // `SAMPLING_REGIME_UNSPECIFIED` clears it and lets the model family decide, and either concrete value sets it.
+  optional voplica.types.ai.model.ModelVariantSamplingRegime sampling_regime = 11;
+  optional string declared_external_ref = 12;
+}
+
+message UpdateModelVariantResponse {
+  voplica.types.ai.model.ModelVariant model_variant = 1;
+}
+
+message DeleteModelVariantRequest {
+  string model_variant_id = 1;
+}
+
+message DeleteModelVariantResponse {
+}
+
+message UpdateModelVariantPublishStatusRequest {
+  string id = 1;
+  voplica.types.base.PublishStatus status = 2;
+}
+
+message UpdateModelVariantPublishStatusResponse {
+  voplica.types.base.PublishStatus status = 1;
+}
+
+message AddModelVariantPreviewAssetRequest {
+  string model_variant_id = 1;
+  string preview_asset_id = 2;
+}
+
+message AddModelVariantPreviewAssetResponse {
+  string created_asset_id = 1;
+}
+
+message DeleteModelVariantPreviewAssetRequest {
+  string model_variant_id = 1;
+  string preview_asset_id = 2;
+}
+
+message DeleteModelVariantPreviewAssetResponse {
+}
+
+message GetModelVariantFilesRequest {
+  string model_variant_id = 1;
+  repeated voplica.types.file.FileVariantFilter file_variant_filter = 10;
+}
+
+message GetModelVariantFilesResponse {
+  voplica.types.file.AssetFileVariantGroups model_asset_files = 1;
+}
+
+message TriggerModelVariantVerificationRequest {
+  string model_variant_id = 1;
+}
+
+message TriggerModelVariantVerificationResponse {
+  string workflow_id = 1;
+}
+
+message UnlockModelVariantFilesModificationRequest {
+  string model_variant_id = 1;
+}
+
+message UnlockModelVariantFilesModificationResponse {
+}
+
+message GetModelVariantPreviewAssetsRequest {
+  string model_variant_id = 1;
+  // Optionally filter by asset_id. If not provided - all preview assets are returned.
+  optional string asset_id_filter = 2;
+  // If provided, the found file variant groups will be returned for each preview asset (or for the asset that matched `asset_id_filter` if provided)
+  optional voplica.types.file.FilesRetriever previews_retriever = 3;
+}
+
+message GetModelVariantPreviewAssetsResponse {
+  // 0 to 10 images / videos for model variant preview
+  // Note: file_variant_groups are returned only if requested explicitly
+  repeated voplica.types.file.AssetFileVariantGroups all_previews = 1;
+}
+
+message GetModelVariantRuntimeStatesRequest {
+  repeated string variant_ids = 1;
+}
+
+message ModelVariantRuntimeStateEntry {
+  string variant_id = 1;
+  voplica.types.ai.common.ModelVariantRuntimeState state = 2;
+}
+
+message GetModelVariantRuntimeStatesResponse {
+  // One entry per REQUESTED id, in request order, including the ids nothing is known about
+  // (state UNSPECIFIED) - so a client can index by position without a second lookup.
+  repeated ModelVariantRuntimeStateEntry entries = 1;
+}
+
+service ModelVariantService {
+  rpc CreateModelVariant (CreateModelVariantRequest) returns (CreateModelVariantResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelVariant (GetModelVariantRequest) returns (GetModelVariantResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Returns recommended base model valiant to use based on the provided criteria
+  rpc GetRecommendedBaseModelVariant (GetRecommendedBaseModelVariantRequest) returns (GetRecommendedBaseModelVariantResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Returns recommended controlnet model valiant
+  rpc GetRecommendedControlNetModelVariant (GetRecommendedControlNetModelVariantRequest) returns (GetRecommendedControlNetModelVariantResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelVariantMetadata (GetModelVariantMetadataRequest) returns (GetModelVariantMetadataResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateModelVariant (UpdateModelVariantRequest) returns (UpdateModelVariantResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Deletes Model Variant and detaches it from the Model
+  rpc DeleteModelVariant (DeleteModelVariantRequest) returns (DeleteModelVariantResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateModelVariantPublishStatus (UpdateModelVariantPublishStatusRequest) returns (UpdateModelVariantPublishStatusResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc AddModelVariantPreviewAsset (AddModelVariantPreviewAssetRequest) returns (AddModelVariantPreviewAssetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeleteModelVariantPreviewAsset (DeleteModelVariantPreviewAssetRequest) returns (DeleteModelVariantPreviewAssetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Will work only if download is enabled for the file variant
+  rpc GetModelVariantFiles (GetModelVariantFilesRequest) returns (GetModelVariantFilesResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc TriggerModelVariantVerification (TriggerModelVariantVerificationRequest) returns (TriggerModelVariantVerificationResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc UnlockModelVariantFilesModification (UnlockModelVariantFilesModificationRequest) returns (UnlockModelVariantFilesModificationResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelVariantPreviewAssets (GetModelVariantPreviewAssetsRequest) returns (GetModelVariantPreviewAssetsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetMultiModelVariant (GetMultiModelVariantRequest) returns (GetMultiModelVariantResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelVariantRuntimeStates (GetModelVariantRuntimeStatesRequest) returns (GetModelVariantRuntimeStatesResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+}

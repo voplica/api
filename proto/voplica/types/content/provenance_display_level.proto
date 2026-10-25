@@ -1,0 +1,36 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.content;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.content";
+option go_package = "voplica.com/types/content";
+option csharp_namespace = "Voplica.Types.Content";
+
+// Controls how much provenance metadata is visible to non-owners when viewing content.
+//
+// The content owner always sees the full provenance regardless of this setting.
+// This only affects what other users see when viewing published content.
+//
+// Three tiers cover the common use cases:
+// - FULL: transparent "how was this made" generation card (default)
+// - BASIC: show models/characters/workflow but hide the prompt and seed
+// - NONE: hide all provenance (just show the content itself)
+enum ProvenanceDisplayLevel {
+  PROVENANCE_DISPLAY_LEVEL_UNSPECIFIED = 0;
+  // Show all provenance fields to everyone.
+  // This is the default for auto-created workflow content.
+  FULL = 1;
+  // Show models, characters, workflow info, and content stage to everyone.
+  // Hide prompt, negative_prompt, and seed from non-owners.
+  // Use this when you want to share what tools/models you used but keep
+  // your prompt private.
+  BASIC = 2;
+  // Hide all provenance from non-owners.
+  // Non-owners see only the content itself with no generation details.
+  NONE = 3;
+}

@@ -1,0 +1,17 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.image;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.image";
+option go_package = "voplica.com/types/image";
+option csharp_namespace = "Voplica.Types.Image";
+
+message ImageSize {
+  uint32 width = 1;
+  uint32 height = 2;
+}

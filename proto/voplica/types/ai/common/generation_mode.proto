@@ -1,0 +1,28 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.common";
+option go_package = "voplica.com/types/ai/common";
+option csharp_namespace = "Voplica.Types.Ai.Common";
+
+enum GenerationMode {
+  GENERATION_MODE_UNSPECIFIED = 0;
+  T2I = 1;
+  I2I_INPAINT = 2;
+  I2I_EDIT = 3;
+  T2V = 20;
+  I2V = 21;
+  V2V = 22;
+  // Speech/audio-driven video generation: supplied audio drives synchronized motion/lip-sync
+  S2V = 23;
+  // ---- Audio output (40-49) ----
+  // Text-to-audio: a prompt (plus optional lyrics) renders a music / audio track.
+  // The first audio-producing mode on the platform (MiniMax Music 3).
+  T2A = 40;
+}

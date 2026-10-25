@@ -1,0 +1,23 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.workflow.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.workflow.common";
+option go_package = "voplica.com/types/workflow/common";
+option csharp_namespace = "Voplica.Types.Workflow.Common";
+
+// Determines what happens when a Step fails (after all retries are exhausted).
+enum StepErrorHandlingType {
+  STEP_ERROR_HANDLING_TYPE_UNSPECIFIED = 0;
+  // Fails the whole workflow. Useful if the Step is critical and other Steps depend on its successful execution.
+  FAIL_WORKFLOW = 1;
+  // Ignores an error, increments `current_iteration` as usual, but outputs nothing (unresolvable output).
+  // Useful for non-critical Steps. For example, often times ContentPublishing is considered as non-critical
+  // or some informative notification steps are considered non-critical.
+  INCREMENT_ITERATION_AND_SKIP = 2;
+}

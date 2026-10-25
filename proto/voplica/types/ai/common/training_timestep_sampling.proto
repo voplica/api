@@ -1,0 +1,24 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.common";
+option go_package = "voplica.com/types/ai/common";
+option csharp_namespace = "Voplica.Types.Ai.Common";
+
+// How diffusion timesteps are sampled during training. Enum values are package-prefixed to
+// avoid name collisions in the shared `voplica.types.ai.common` namespace (proto3 enum
+// values are scoped to the enclosing package, not the enum).
+enum TrainingTimestepSampling {
+  TRAINING_TIMESTEP_SAMPLING_UNSPECIFIED = 0;
+  TRAINING_TIMESTEP_SAMPLING_UNIFORM = 1;
+  TRAINING_TIMESTEP_SAMPLING_SHIFT = 2;
+  TRAINING_TIMESTEP_SAMPLING_FLUX_SHIFT = 3;
+  TRAINING_TIMESTEP_SAMPLING_SIGMA = 4;
+  TRAINING_TIMESTEP_SAMPLING_SIGMOID = 5;
+}

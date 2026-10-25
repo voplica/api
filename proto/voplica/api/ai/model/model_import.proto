@@ -1,0 +1,152 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.ai.model;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.ai.model";
+option go_package = "voplica.com/api/ai/model";
+option csharp_namespace = "Voplica.Api.Ai.Model";
+import "voplica/auth.proto";
+import "voplica/types/base/pagination.proto";
+import "voplica/types/ai/model/model_import.proto";
+
+// Import Models / Model Variants / model files from Civitai and HuggingFace.
+service ModelImportService {
+  // Inspect an external model (Civitai model or version URL) or repository (HuggingFace URL)
+  // with the caller's stored token. A missing/invalid token is reported in token_status with
+  // no summary (not an error) so the studio can ask for the token.
+  rpc ResolveExternalModel (ResolveExternalModelRequest) returns (ResolveExternalModelResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Create a Model + one variant per selected version + empty preview assets, then start the
+  // background download job.
+  rpc ImportModel (ImportModelRequest) returns (ImportModelResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // One external version into an existing model of the caller.
+  rpc ImportModelVariant (ImportModelVariantRequest) returns (ImportModelVariantResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Model files only (Civitai version files or HuggingFace repository files) into an existing
+  // variant whose asset is UNLOCKED.
+  rpc ImportModelVariantFiles (ImportModelVariantFilesRequest) returns (ImportModelVariantFilesResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetModelImport (GetModelImportRequest) returns (GetModelImportResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListModelImports (ListModelImportsRequest) returns (ListModelImportsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc CancelModelImport (CancelModelImportRequest) returns (CancelModelImportResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+}
+
+message ResolveExternalModelRequest {
+  string source_uri = 1;
+}
+
+message ResolveExternalModelResponse {
+  voplica.types.ai.model.ExternalTokenStatus token_status = 1;
+  oneof summary {
+    voplica.types.ai.model.ExternalModelSummary model = 2;
+    voplica.types.ai.model.ExternalRepoSummary repo = 3;
+  }
+  voplica.types.ai.model.ImportQuotaEstimate quota = 4;
+}
+
+message ImportModelRequest {
+  string source_uri = 1;
+  voplica.types.ai.model.ImportModelFields model_fields = 2;
+  // Applied to every created variant.
+  voplica.types.ai.model.ImportVariantFields variant_defaults = 3;
+  // Empty = every version whose family is supported.
+  repeated voplica.types.ai.model.ImportVersionSelection versions = 4;
+  optional string idempotency_key = 5;
+}
+
+message ImportModelResponse {
+  string model_id = 1;
+  string import_id = 2;
+  repeated string model_variant_ids = 3;
+}
+
+message ImportModelVariantRequest {
+  string parent_model_id = 1;
+  string source_uri = 2;
+  voplica.types.ai.model.ImportVersionSelection version = 3;
+  voplica.types.ai.model.ImportVariantFields variant_fields = 4;
+  optional string idempotency_key = 5;
+}
+
+message ImportModelVariantResponse {
+  string model_variant_id = 1;
+  string import_id = 2;
+}
+
+message ImportModelVariantFilesRequest {
+  string model_variant_id = 1;
+  string source_uri = 2;
+  // Empty = the primary supported model file (Civitai) / the file named by the URI (HuggingFace).
+  repeated string external_file_ids = 3;
+  optional string idempotency_key = 4;
+}
+
+message ImportModelVariantFilesResponse {
+  string import_id = 1;
+}
+
+message GetModelImportRequest {
+  string id = 1;
+}
+
+message GetModelImportResponse {
+  voplica.types.ai.model.ModelImport model_import = 1;
+}
+
+message ListModelImportsRequest {
+  optional string model_id = 1;
+  optional string model_variant_id = 2;
+  // Only PENDING / RUNNING / CANCELLING imports.
+  bool active_only = 3;
+  voplica.types.base.PaginationToken pagination = 100;
+}
+
+message ListModelImportsResponse {
+  repeated voplica.types.ai.model.ModelImport imports = 1;
+  voplica.types.base.PaginationTokenResponse pagination = 100;
+}
+
+message CancelModelImportRequest {
+  string id = 1;
+}
+
+message CancelModelImportResponse {
+  bool cancelled = 1;
+}

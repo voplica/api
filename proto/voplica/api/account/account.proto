@@ -1,0 +1,51 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.account;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.account";
+option go_package = "voplica.com/api/account";
+option csharp_namespace = "Voplica.Api.Account";
+import "voplica/auth.proto";
+import "voplica/types/account/account.proto";
+
+message GetAccountRequest {
+  oneof filter {
+    string account_id = 1;
+    string owner_id = 2;
+    string username = 3;
+  }
+}
+
+message GetAccountResponse {
+  voplica.types.account.VoplicaAccount account = 1;
+}
+
+message GetAccountMetadataRequest {
+  string account_id = 1;
+}
+
+message GetAccountMetadataResponse {
+  voplica.types.account.VoplicaAccountMetadata account_metadata = 1;
+}
+
+service AccountService {
+  // find account
+  rpc GetAccount (GetAccountRequest) returns (GetAccountResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // find account
+  rpc GetAccountMetadata (GetAccountMetadataRequest) returns (GetAccountMetadataResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+}

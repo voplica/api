@@ -1,0 +1,62 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.creator;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.creator";
+option go_package = "voplica.com/api/creator";
+option csharp_namespace = "Voplica.Api.Creator";
+import "voplica/auth.proto";
+import "voplica/types/creator/creator_program.proto";
+import "voplica/types/vault/vault.proto";
+
+service CreatorProgramService {
+  rpc GetMyCreatorProgram (GetMyCreatorProgramRequest) returns (GetMyCreatorProgramResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // The creator's own snapshot, so the studio can offer the declared-ref picker instead of asking
+  // the user to type "author/repo" from memory. Owner-scoped, cursor-paginated.
+  rpc ListMyProfileModels (ListMyProfileModelsRequest) returns (ListMyProfileModelsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+}
+
+message GetMyCreatorProgramRequest {
+}
+
+message GetMyCreatorProgramResponse {
+  // Absent when the caller has never applied (status UNSPECIFIED is the same fact; the message is
+  // absent so a client cannot mistake a default-constructed row for a real one).
+  optional voplica.types.creator.CreatorProgramApplication application = 1;
+  // The terms version the program currently requires.
+  uint32 terms_version = 2;
+  // The pending raise request, when there is one.
+  optional voplica.types.creator.CreatorAllowanceRequest pending_allowance_request = 3;
+}
+
+message ListMyProfileModelsRequest {
+  optional voplica.types.vault.ThirdPartyProvider provider = 1;
+  // Substring match on the ref or the display name; the picker's search box.
+  optional string name_filter = 2;
+  int64 limit = 3; // validate: 1 <= limit <= 100
+  optional string cursor = 10;
+  bool before = 11; // false = after cursor, true = before cursor
+  bool check_more_available = 12; // checks limit + 1
+}
+
+message ListMyProfileModelsResponse {
+  repeated voplica.types.creator.CreatorProfileModelRef models = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}

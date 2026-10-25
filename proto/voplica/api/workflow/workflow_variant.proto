@@ -1,0 +1,258 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.workflow;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.workflow";
+option go_package = "voplica.com/api/workflow";
+option csharp_namespace = "Voplica.Api.Workflow";
+import "voplica/auth.proto";
+import "voplica/types/workflow/workflow_definition.proto";
+import "voplica/types/workflow/value_spec.proto";
+import "voplica/types/workflow/param_value.proto";
+import "voplica/types/base/publish_status.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/subscription/studio_subscription_type.proto";
+import "voplica/types/base/points.proto";
+
+message ListWorkflowVariantsRequest {
+  // The workflow to list variants for
+  string parent_workflow_id = 1;
+  optional ListWorkflowVariantsFilters filters = 2;
+  // Max amount of elements per page
+  int64 limit = 3;
+  // How to sort results
+  ListWorkflowVariantsSorting sort = 4;
+  // Extra options for fields fetching
+  WorkflowVariantFieldsFetchingOptions fields_fetching_options = 5;
+  // to continue pagination use `next_token` with `before = false` to fetch the next page or
+  // `prev_token` with `before = true` to fetch the previous page.
+  optional string cursor = 10;
+  // Used only with `cursor`. If `false` it means fetch data after cursor. If `true` it means fetch data before cursor.
+  bool before = 11;
+  // Check limit + 1 to know if there is more data available
+  bool check_more_available = 12;
+}
+
+message ListWorkflowVariantsFilters {
+  optional voplica.types.base.PublishStatus status = 1;
+  optional voplica.types.subscription.StudioSubscriptionType min_required_subscription = 2;
+}
+
+// Note: Enum values are prefixed (e.g., WORKFLOW_VARIANT_CREATED_AT instead of CREATED_AT) to avoid
+// conflicts with other sort keys in the same package. Protobuf uses C++ scoping rules where enum
+// values exist in the scope enclosing the enum.
+enum WorkflowVariantSortKey {
+  WORKFLOW_VARIANT_SORT_KEY_UNSPECIFIED = 0;
+  WORKFLOW_VARIANT_CREATED_AT = 1;
+}
+
+message ListWorkflowVariantsSorting {
+  WorkflowVariantSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListWorkflowVariantsResponse {
+  repeated voplica.types.workflow.WorkflowVariant variants = 1;
+  optional string next_token = 2;
+  optional string prev_token = 3;
+  optional bool more_available = 4;
+}
+
+message CreateWorkflowVariantRequest {
+  string parent_workflow_id = 1;
+  // Workflow variant name
+  string variant_name = 2;
+  // Steps definitions for the workflow
+  repeated voplica.types.workflow.WorkflowStep steps = 3;
+  // Input specification
+  map<string, voplica.types.workflow.WorkflowInputSpec> inputs_spec = 4;
+  // Output specification
+  map<string, voplica.types.workflow.WorkflowConditionalOutput> outputs = 5;
+  // Run policy configuration
+  optional voplica.types.workflow.WorkflowRunPolicy run_policy = 6;
+  // Optional inputs block position
+  optional voplica.types.base.Point2D inputs_block_position = 7;
+  // Optional outputs block position
+  optional voplica.types.base.Point2D outputs_block_position = 8;
+  optional voplica.types.workflow.WorkflowResolvableParamValue default_content_provenance_generation_params = 9;
+}
+
+message CreateWorkflowVariantResponse {
+  string id = 1;
+}
+
+message GetWorkflowVariantRequest {
+  oneof attribute {
+    string id = 1;
+    string idempotency_key = 2;
+  }
+  WorkflowVariantFieldsFetchingOptions fields_fetching_options = 3;
+}
+
+message WorkflowVariantFieldsFetchingOptions {
+  // If provided, the found file variant groups will be returned for the default preview asset
+  optional voplica.types.file.FilesRetriever default_preview_retriever = 1;
+}
+
+message GetWorkflowVariantResponse {
+  voplica.types.workflow.WorkflowVariant workflow_variant = 1;
+}
+
+message GetWorkflowVariantMetadataRequest {
+  string id = 1;
+}
+
+message GetWorkflowVariantMetadataResponse {
+  voplica.types.workflow.WorkflowVariantMetadata variant_metadata = 1;
+}
+
+message UpdateWorkflowVariantRequest {
+  string workflow_variant_id = 1;
+  optional string variant_name = 2;
+  // Steps definitions for the workflow (applicable to unpublished variants only)
+  optional UpdateWorkflowVariantSteps steps = 3;
+  // Input specification (applicable to unpublished variants only)
+  optional UpdateWorkflowVariantInputSpec inputs_spec = 4;
+  // Output specification (applicable to unpublished variants only)
+  optional UpdateWorkflowVariantOutputs outputs = 5;
+  // Run policy configuration
+  optional voplica.types.workflow.WorkflowRunPolicy run_policy = 6;
+  optional voplica.types.file.AssetSelectionStrategy default_preview = 7;
+  // Optional inputs block position
+  optional voplica.types.base.Point2D inputs_block_position = 8;
+  // Optional outputs block position
+  optional voplica.types.base.Point2D outputs_block_position = 9;
+  optional voplica.types.workflow.WorkflowResolvableParamValue default_content_provenance_generation_params = 10;
+}
+
+message UpdateWorkflowVariantSteps {
+  repeated voplica.types.workflow.WorkflowStep steps = 1;
+}
+
+message UpdateWorkflowVariantInputSpec {
+  map<string, voplica.types.workflow.WorkflowInputSpec> inputs_spec = 1;
+}
+
+message UpdateWorkflowVariantOutputs {
+  map<string, voplica.types.workflow.WorkflowConditionalOutput> outputs = 1;
+}
+
+message UpdateWorkflowVariantResponse {
+}
+
+message DeleteWorkflowVariantRequest {
+  string workflow_variant_id = 1;
+}
+
+message DeleteWorkflowVariantResponse {
+}
+
+message PublishWorkflowVariantRequest {
+  string id = 1;
+}
+
+message PublishWorkflowVariantResponse {
+  voplica.types.base.PublishStatus status = 1;
+}
+
+message GetWorkflowVariantPreviewAssetsRequest {
+  string workflow_variant_id = 1;
+  // Optionally filter by asset_id. If not provided - all preview assets are returned.
+  optional string asset_id_filter = 2;
+  // If provided, the found file variant groups will be returned for each preview asset (or for the asset that matched `asset_id_filter` if provided)
+  optional voplica.types.file.FilesRetriever previews_retriever = 3;
+}
+
+message GetWorkflowVariantPreviewAssetsResponse {
+  // 0 to 10 images / videos for model variant preview
+  // Note: file_variant_groups are returned only if requested explicitly
+  repeated voplica.types.file.AssetFileVariantGroups all_previews = 1;
+}
+
+message AddWorkflowVariantPreviewAssetRequest {
+  string workflow_variant_id = 1;
+  string preview_asset_id = 2;
+}
+
+message AddWorkflowVariantPreviewAssetResponse {
+  string created_asset_id = 1;
+}
+
+message DeleteWorkflowVariantPreviewAssetRequest {
+  string workflow_variant_id = 1;
+  string preview_asset_id = 2;
+}
+
+message DeleteWorkflowVariantPreviewAssetResponse {
+}
+
+service WorkflowVariantService {
+  rpc CreateWorkflowVariant (CreateWorkflowVariantRequest) returns (CreateWorkflowVariantResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetWorkflowVariant (GetWorkflowVariantRequest) returns (GetWorkflowVariantResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetWorkflowVariantMetadata (GetWorkflowVariantMetadataRequest) returns (GetWorkflowVariantMetadataResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateWorkflowVariant (UpdateWorkflowVariantRequest) returns (UpdateWorkflowVariantResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Deletes Workflow Variant and detaches it from the Workflow
+  rpc DeleteWorkflowVariant (DeleteWorkflowVariantRequest) returns (DeleteWorkflowVariantResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Published final Workflow Variant
+  rpc PublishWorkflowVariant (PublishWorkflowVariantRequest) returns (PublishWorkflowVariantResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // List workflow variants for a specific workflow
+  rpc ListWorkflowVariants (ListWorkflowVariantsRequest) returns (ListWorkflowVariantsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetWorkflowVariantPreviewAssets (GetWorkflowVariantPreviewAssetsRequest) returns (GetWorkflowVariantPreviewAssetsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc AddWorkflowVariantPreviewAsset (AddWorkflowVariantPreviewAssetRequest) returns (AddWorkflowVariantPreviewAssetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeleteWorkflowVariantPreviewAsset (DeleteWorkflowVariantPreviewAssetRequest) returns (DeleteWorkflowVariantPreviewAssetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+}

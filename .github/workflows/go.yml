@@ -1,0 +1,64 @@
+# The Go code of the Voplica API is built by its users, not published. On every pull request that touches it, on every
+# version tag and on demand, this workflow does what clients/go/README.md documents: at the repository root it generates
+# the packages with the template's pinned remote plugins (`buf generate --template clients/go/buf.gen.yaml`), then
+# builds, vets and tests the module github.com/voplica/api/clients/go, the generated packages and the README's example.
+# It only reads the repository.
+name: Go
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "clients/go/**"
+      - "proto/**"
+      - "buf.yaml"
+      - "clients/typescript/package-lock.json"
+      - ".github/workflows/go.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Generate, build and test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clients/typescript/package-lock.json
+      - name: buf, at the version clients/typescript/package-lock.json pins
+        working-directory: clients/typescript
+        run: npm ci
+      - name: The shape of the configuration, and buf's own reading of the template
+        run: node --test "clients/go/test/*.test.mjs"
+      - name: Generate the packages at the repository root, as the README does
+        env:
+          BSR_TOKEN: ${{ secrets.BUF_TOKEN }}
+        run: |
+          # The Buf Schema Registry runs the remote plugins: 10 anonymous runs an hour from one address. The optional
+          # repository secret BUF_TOKEN (a Buf account's token) raises the limit.
+          if [ -n "$BSR_TOKEN" ]; then export BUF_TOKEN="$BSR_TOKEN"; fi
+          clients/typescript/node_modules/.bin/buf generate --template clients/go/buf.gen.yaml
+          echo "generated $(find clients/go/gen -name '*.pb.go' | wc -l) files"
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: clients/go/go.mod
+          cache-dependency-path: clients/go/go.sum
+      - name: Build, vet and test the module
+        working-directory: clients/go
+        run: |
+          go mod tidy -diff
+          go build ./...
+          go vet ./...
+          go test ./...

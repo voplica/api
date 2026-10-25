@@ -1,0 +1,190 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.workflow;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.workflow";
+option go_package = "voplica.com/api/workflow";
+option csharp_namespace = "Voplica.Api.Workflow";
+import "voplica/auth.proto";
+import "voplica/types/workflow/workflow_definition.proto";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/publish_status.proto";
+import "voplica/types/file/files.proto";
+import "google/protobuf/empty.proto";
+import "voplica/types/subscription/studio_subscription_type.proto";
+
+message CreateWorkflowRequest {
+  // Workflow name
+  string name = 1;
+  // Workflow visibility type. All variants inherit this visibility type.
+  voplica.types.base.VisibilityType visibility = 2;
+  // Optional description of the workflow
+  string description = 3;
+  // Whether this workflow is NSFW. NSFW workflows are hidden from anonymous users' trending/safe listings.
+  bool nsfw = 4;
+}
+
+message CreateWorkflowResponse {
+  string workflow_id = 1;
+}
+
+message GetWorkflowRequest {
+  oneof attribute {
+    string id = 1;
+    string idempotency_key = 2;
+  }
+  WorkflowFieldsFetchingOptions fields_fetching_options = 3;
+}
+
+message GetWorkflowResponse {
+  voplica.types.workflow.Workflow workflow = 1;
+}
+
+message GetWorkflowMetadataRequest {
+  string id = 1;
+}
+
+message GetWorkflowMetadataResponse {
+  voplica.types.workflow.WorkflowMetadata metadata = 1;
+}
+
+message UpdateWorkflowRequest {
+  string workflow_id = 1;
+  optional string workflow_name = 2;
+  optional voplica.types.base.VisibilityType visibility = 3;
+  optional string description = 4;
+  optional WorkflowVariantSelectionStrategy default_workflow_variant = 5;
+  optional bool nsfw = 6;
+}
+
+message WorkflowVariantSelectionStrategy {
+  oneof strategy {
+    string use_variant_id = 1;
+    google.protobuf.Empty use_latest_variant = 2;
+  }
+}
+
+message UpdateWorkflowResponse {
+}
+
+message DeleteWorkflowRequest {
+  string workflow_id = 1;
+}
+
+message DeleteWorkflowResponse {
+}
+
+message ListWorkflowsRequest {
+  optional ListWorkflowsFilters filters = 1;
+  // Max amount of elements per page
+  int64 limit = 2;
+  // How to sort results
+  ListWorkflowsSorting sort = 3;
+  WorkflowFieldsFetchingOptions fields_fetching_options = 4;
+  // to continue pagination use `next_token` with `before_cursor = false` to fetch the next page or
+  // `prev_token` with `before_cursor = true` to fetch the previous page.
+  optional string cursor = 10;
+  // Used only with `cursor`. If `false` it means fetch data after cursor. If `true` it means fetch data before cursor.
+  bool before = 11;
+  // Check limit + 1 to know if there is more data available
+  // By default is is `false`. Meaning that `more_available` flag won't be returned.
+  // In this case, the only way to verify that there is any data available is to fetch the next page.
+  // Generally this should not be used for infinite scrolls, but can be used if we have buttons like `next`, `previous`.
+  bool check_more_available = 12;
+}
+
+message ListWorkflowsFilters {
+  optional string owner_id = 1;
+  optional voplica.types.base.VisibilityType visibility = 2;
+  optional voplica.types.base.PublishStatus status = 3;
+  optional voplica.types.subscription.StudioSubscriptionType min_required_subscription = 4;
+  // `true` means to return NSFW workflows only.
+  // `false` means to exclude NSFW workflows.
+  // unset means to return both NSFW and SFW workflows.
+  optional bool nsfw = 5;
+  // Case-insensitive workflow NAME substring search ('%term%'), composed with every other filter above.
+  // Server-side guards: blank after trim = no filter; 1 char after trim = INVALID_ARGUMENT (min 2 chars);
+  // capped at 100 chars. When set, results are ordered by created_at (keyset) regardless of the
+  // requested trending/last-variant sort key — mirrors the Voices/Characters `query` relation semantics.
+  optional string query = 6;
+}
+
+message WorkflowFieldsFetchingOptions {
+  // If provided, the found file variant groups will be returned for the default preview asset
+  optional voplica.types.file.FilesRetriever default_preview_retriever = 1;
+}
+
+// Note: Enum values are prefixed (e.g., WORKFLOW_CREATED_AT instead of CREATED_AT) to avoid
+// conflicts with WorkflowExecutionSortKey.CREATED_AT in the same package. Protobuf uses C++
+// scoping rules where enum values exist in the scope enclosing the enum.
+enum WorkflowSortKey {
+  WORKFLOW_SORT_KEY_UNSPECIFIED = 0;
+  WORKFLOW_CREATED_AT = 1;
+  LAST_WORKFLOW_VARIANT_CREATED = 2;
+  WORKFLOW_TRENDING_SCORE = 3;
+}
+
+message ListWorkflowsSorting {
+  WorkflowSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListWorkflowsResponse {
+  repeated voplica.types.workflow.Workflow workflows = 1;
+  // Token to pass in the next query's Pagination directive to go to the next page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  // If it's missing the last used cursor is essentially the `next_token`
+  optional string next_token = 2;
+  // Token to pass in the next query's Pagination directive to go to the previous page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  // If it's missing the last used cursor is essentially the `prev_token`
+  optional string prev_token = 3;
+  // Returns if there is more data available (i.e. checks `limit + 1`).
+  // Returned only if `check_more_available` is set to `true`
+  optional bool more_available = 4;
+}
+
+service WorkflowService {
+  rpc CreateWorkflow (CreateWorkflowRequest) returns (CreateWorkflowResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetWorkflow (GetWorkflowRequest) returns (GetWorkflowResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetWorkflowMetadata (GetWorkflowMetadataRequest) returns (GetWorkflowMetadataResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateWorkflow (UpdateWorkflowRequest) returns (UpdateWorkflowResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Deletes Workflow, including all attached Workflow Variants
+  rpc DeleteWorkflow (DeleteWorkflowRequest) returns (DeleteWorkflowResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListWorkflows (ListWorkflowsRequest) returns (ListWorkflowsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+}

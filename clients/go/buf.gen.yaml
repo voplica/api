@@ -1,0 +1,26 @@
+# The Go code of the Voplica API, built by you (no Go module is published). From the root of the repository:
+#
+#   buf generate --template clients/go/buf.gen.yaml
+#
+# writes the messages, enums and gRPC service stubs of every file under proto/ into clients/go/gen/: the packages of the
+# module github.com/voplica/api/clients/go (clients/go/go.mod). The paths here are relative to the root, where buf runs.
+version: v2
+# gen/ holds only what this run generates: a package left from an earlier version is removed.
+clean: true
+managed:
+  enabled: true
+  override:
+    # The Go package of proto/<directory>/<file>.proto is github.com/voplica/api/clients/go/gen/<directory>, for example
+    # .../gen/voplica/api/payment for voplica/api/payment/payment.proto.
+    - file_option: go_package_prefix
+      value: github.com/voplica/api/clients/go/gen
+inputs:
+  - directory: proto
+plugins:
+  # Run on the Buf Schema Registry, at these versions; the runtime clients/go/go.mod requires is at least as new.
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: clients/go/gen
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go:v1.6.2
+    out: clients/go/gen
+    opt: paths=source_relative

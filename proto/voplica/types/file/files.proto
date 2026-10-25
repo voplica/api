@@ -1,0 +1,363 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.file;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.file";
+option go_package = "voplica.com/types/file";
+option csharp_namespace = "Voplica.Types.File";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/file_type.proto";
+import "voplica/types/base/mime_type.proto";
+import "voplica/types/base/asset_type.proto";
+import "voplica/types/base/lock_status.proto";
+import "voplica/types/base/readiness_status.proto";
+import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/base/content_moderation_status.proto";
+import "voplica/types/base/asset_mpa_rating_source.proto";
+import "voplica/types/file/codec/video_codec.proto";
+import "voplica/types/file/codec/audio_codec.proto";
+import "voplica/types/file/codec/profile/video_codec_profile.proto";
+import "voplica/types/file/codec/profile/audio_codec_profile.proto";
+import "voplica/types/file/convert/file_convert.proto";
+import "voplica/types/file/file_mpa_analysis.proto";
+import "voplica/types/file/meta/file_partition_type.proto";
+import "voplica/types/image/image_size.proto";
+import "voplica/types/base/content_presentation_type.proto";
+import "voplica/types/ai/common/model_file_structure.proto";
+import "voplica/types/ai/common/quantization_type.proto";
+import "voplica/types/ai/common/d_type.proto";
+import "voplica/types/ai/common/model_file_role.proto";
+import "google/protobuf/empty.proto";
+
+message FileInfo {
+  string id = 1;
+  int64 size_bytes = 2;
+  string uri = 3;
+  voplica.types.base.MimeType mime_type = 4;
+  int64 creation_timestamp = 5;
+  optional int32 chunk_size_used = 6;
+  optional string file_name = 7;
+  optional string derived_from_group_id = 8;
+  // describes how `uri` should be used
+  voplica.types.file.meta.FilePartitionType uri_partition = 9;
+  string owner_id = 10;
+  FileInfoMetadata metadata = 11;
+  optional FileMpaAnalysis mpa_analysis = 12;
+}
+
+message FileInfoMetadata {
+  oneof metadata {
+    ObjectInfo object = 1;
+    ImageInfo image = 2;
+    VideoInfo video = 3;
+    AudioInfo audio = 4;
+    ModelGenInfo model_gen = 5;
+    VectorGraphicInfo vector_graphic = 6;
+  }
+}
+
+message ObjectInfo {
+}
+
+message ImageInfo {
+  uint32 width = 1;
+  uint32 height = 2;
+}
+
+message AudioInfo {
+  uint64 length_ms = 1;
+  voplica.types.file.codec.AudioCodecType codec = 2;
+  voplica.types.file.codec.profile.AudioCodecProfileType profile = 3;
+  uint64 bit_rate = 4;
+  uint32 sample_rate = 5;
+  uint32 channels_count = 6;
+}
+
+message VideoInfo {
+  uint32 width = 1;
+  uint32 height = 2;
+  voplica.types.file.codec.VideoCodecType codec = 3;
+  voplica.types.file.codec.profile.VideoCodecProfileType profile = 4;
+  voplica.types.file.codec.profile.VideoCodecLevelType level = 5;
+  uint64 length_ms = 6;
+  uint64 bit_rate = 7;
+  double fps = 8;
+  optional AudioInfo audio = 9;
+}
+
+message ModelGenInfo {
+  voplica.types.ai.common.DType weight_dtype = 1;
+  voplica.types.ai.common.QuantizationType weight_quant_type = 2;
+  voplica.types.ai.common.ModelFileStructure model_file_structure = 3;
+  voplica.types.ai.common.ModelFileRole role = 4;
+  // The diffusers slot this file fills ("transformer", "transformer_2", "vae", "text_encoder",
+  // "text_encoder_2"); empty when unknown. Declared via
+  // ConvertParamType.MODEL_GEN_COMPONENT_NAME, re-learned by verification.
+  string component_name = 5;
+  optional ModelResidentFootprint measured_footprint = 6;
+}
+
+message ModelResidentFootprint {
+  uint64 resident_bytes = 1;
+  // The dtype the loader MATERIALISED the primary weights at for this measurement. A planner
+  // compares like with like: an fp8-loaded measurement says nothing about a bf16 load.
+  voplica.types.ai.common.DType loaded_dtype = 2;
+  voplica.types.ai.common.QuantizationType loaded_quant_type = 3;
+  string weight_tier_label = 4;
+}
+
+message VectorGraphicInfo {
+  // Viewbox / artboard dimensions if available (e.g. from SVG viewBox or EPS bounding box)
+  optional uint32 width = 1;
+  optional uint32 height = 2;
+}
+
+message AssetFileVariantGroups {
+  string asset_id = 1;
+  voplica.types.base.AssetType asset_type = 2;
+  voplica.types.base.ReadinessStatus asset_readiness = 3;
+  repeated FileVariantGroup file_variant_groups = 4;
+  optional voplica.types.base.MPARating mpa_rating = 5;
+  voplica.types.base.ContentModerationStatus moderation_status = 6;
+  optional string readiness_message = 7;
+  bool hidden_from_non_owners = 8;
+  bool mpa_publication_pending = 9;
+}
+
+message Asset {
+  string id = 1;
+  string owner_id = 2;
+  voplica.types.base.AssetType asset_type = 3;
+  // Visibility is inferred from referenced entities where the resource is used.
+  // By default any asset is PRIVATE.
+  // If the user creates a public post - the associated assets will become public.
+  // If the user create public content generation - the associated assets will become public.
+  // All file uploads will create Private asset, but if it's published in a public space - it becomes public as well.
+  voplica.types.base.VisibilityType visibility = 4;
+  int64 created_at = 5;
+  // Shows if the user can freely add / remove files or file variant groups to this asset.
+  // If the status is locked - user can't attach new file uploads to the asset.
+  // If the status is unlocked - user can freely upload / overwrite any files in the asset.
+  voplica.types.base.LockStatus user_modifications_lock = 6;
+  voplica.types.base.ReadinessStatus readiness_status = 7;
+  reserved 10 to 12;
+  optional voplica.types.base.MPARating mpa_rating = 8;
+  // Who set `mpa_rating`. ESTIMATED is a placeholder the analysis overwrites (it may LOWER it); ANALYSIS /
+  // PROVIDER / ADMIN short-circuit a later verification; USER is the owner's raise-only edit, never below
+  // `analyzed_mpa_rating`, and never a reason to skip the analysis.
+  voplica.types.base.AssetMpaRatingSource mpa_rating_source = 9;
+  voplica.types.base.ContentModerationStatus moderation_status = 13;
+  // The analysis' own rating, a ratchet (a re-analysis may raise it, never lower it) - the FLOOR of the
+  // owner's edit. Absent until an analysis has been applied.
+  optional voplica.types.base.MPARating analyzed_mpa_rating = 14;
+  optional string readiness_message = 15;
+  bool hidden_from_non_owners = 16;
+  bool mpa_publication_pending = 17;
+}
+
+message FileVariantGroup {
+  string id = 1;
+  string owner_id = 2;
+  string asset_id = 3;
+  // if source file id is null it means it was removed
+  optional string source_file_id = 4;
+  optional voplica.types.base.FileType source_file_type = 5;
+  int64 created_at = 6;
+  // Convert flow that produced this file variant group
+  voplica.types.file.convert.ConvertFlowType flow_type = 7;
+  voplica.types.base.ContentPresentationType presentation_type = 8;
+  voplica.types.base.FileType derived_file_type = 9;
+  repeated FileInfo derived_files = 10;
+}
+
+message FileVariantFilter {
+  // if not provided it means - all convert flow flow types
+  optional voplica.types.file.convert.ConvertFlowType flow_type = 1;
+  // if not provided it means - all presentation types
+  optional voplica.types.base.ContentPresentationType presentation_type = 2;
+  // if `true` it returns all matched files.
+  // if `false` it returns only the best matched file (or none if no matches).
+  bool return_all_matched_files = 3;
+  oneof variant {
+    NoOpFilter no_op = 10; // to return all / any files
+    SkipAllFilter skip_all = 11; // to return no files
+    ImageVariantFilter image = 12;
+    VideoVariantFilter video = 13;
+    AudioVariantFilter audio = 14;
+    ModelGenVariantFilter model_gen = 15;
+    VectorGraphicVariantFilter vector_graphic = 16;
+  }
+}
+
+message NoOpFilter {
+  // This filter means - no any special filtration logic (i.e. return all files)
+}
+
+message SkipAllFilter {
+  // This filter means - to filter out all files (i.e. return no files)
+}
+
+message ImageVariantFilter {
+  // First ordered format has higher preference over the next format.
+  // If `all_matches == False` then additional formats are used as fallback formats.
+  // If `all_matches == True` then variants per each resolution filter is returned.
+  // e.g. [webp, jpg, png]
+  // If none are specified - it means any/all format
+  repeated voplica.types.base.MimeType formats = 1;
+  oneof resolution {
+    // Returns image variants with any resolution
+    AllMatch all = 10;
+    // Returns the image variant with highest resolution requested
+    MaxMatch max = 11;
+    // Returns the image variant with the smallest resolution that is equal or greater then the provided size.
+    FitResolution fit_out = 12;
+    // Returns the image variant with the gratest resolution that is equal or less then the provided size.
+    FitResolution fit_in = 13;
+  }
+}
+
+message AllMatch {
+}
+
+message MaxMatch {
+}
+
+message MinMatch {
+}
+
+message FitResolution {
+  voplica.types.image.ImageSize size = 1;
+  // If none found, then fallbacks to the closest resolution:
+  // - fit_out: if none is found, then it falls back to the greatest image.
+  // - fit_in: if none is found, then it falls back to the smallest image.
+  bool fallback_closest = 2;
+}
+
+message VideoVariantFilter {
+  // First ordered codec has higher preference over the next codec.
+  // If `all_matches == False` then additional codecs are used as fallback codecs.
+  // If `all_matches == True` then variants per each resolution filter is returned.
+  // e.g. [VIDEO_CODEC_AV1, VIDEO_CODEC_VP9, VIDEO_CODEC_H265, VIDEO_CODEC_H264]
+  // If none are specified - it means any/all codec
+  repeated voplica.types.file.codec.VideoCodecType codecs = 1;
+  oneof resolution {
+    // Returns image variants with any resolution
+    AllMatch all = 10;
+    // Returns the image variant with highest resolution requested
+    MaxMatch max = 11;
+    // Returns the image variant with the smallest resolution that is equal or greater then the provided size.
+    FitResolution fit_out = 12;
+    // Returns the image variant with the gratest resolution that is equal or less then the provided size.
+    FitResolution fit_in = 13;
+  }
+}
+
+message AudioVariantFilter {
+  // First ordered codec has higher preference over the next codec.
+  // If `all_matches == False` then additional codecs are used as fallback codecs.
+  // If `all_matches == True` then variants per each resolution filter is returned.
+  // e.g. [AUDIO_CODEC_VORBIS, AUDIO_CODEC_OPUS, AUDIO_CODEC_AAC]
+  // If none are specified - it means any/all codec
+  repeated voplica.types.file.codec.AudioCodecType codecs = 1;
+  oneof bitrate {
+    // Returns audio variants with any bitrate
+    AllMatch all = 10;
+    // Returns the audio variant with highest bitrate requested
+    MaxMatch max = 11;
+    // Returns the audio variant with smallest bitrate requested
+    MinMatch min = 12;
+  }
+}
+
+message ModelGenVariantFilter {
+  oneof file_size {
+    // Returns generative model variants with any file size
+    AllMatch all = 10;
+    // Returns the generative model variant with biggest file size
+    MaxMatch max = 11;
+    // Returns the generative model variant with smallest file size
+    MinMatch min = 12;
+  }
+}
+
+message VectorGraphicVariantFilter {
+  // First ordered format has higher preference over the next format.
+  // e.g. [svg, eps, pdf]
+  // If none are specified - it means any/all format
+  repeated voplica.types.base.MimeType formats = 1;
+}
+
+message AssetSelectionStrategy {
+  oneof strategy {
+    // Asset ID must already be added as a preview to the used entity.
+    string use_asset_id = 1;
+    // Do not set default preview explicitly. Instead, always use the latest added preview as the default.
+    google.protobuf.Empty use_latest_asset = 2;
+  }
+}
+
+message FilesRetriever {
+  // If provided, the found file variant groups will be returned for the requested asset(s)
+  repeated voplica.types.file.FileVariantFilter file_variant_filters = 1;
+  optional voplica.types.base.MPARating max_mpa_rating = 2;
+}
+
+message FileReference {
+  oneof reference {
+    // Direct reference by file id
+    string file_id = 1;
+    // Reference by providing the whole FileInfo. Useful for Orchestrator Nodes.
+    FileInfo file_info = 2;
+    // File reference of a file variant group (user must be the owner of the file to use this method)
+    FileReferenceFromFileVariantGroup file_ref = 3;
+    // Reference to an asset within a specific content (user must have read permissions)
+    ContentFileReference content_file_ref = 4;
+    CharacterLookAssetFileReference character_look_asset_file_ref = 5;
+    // Reference to an asset attached to a CHARACTER itself (a preview), not to one of its looks.
+    CharacterPreviewAssetFileReference character_preview_asset_file_ref = 6;
+    VoiceReferenceAudioFileReference voice_reference_audio_file_ref = 7;
+  }
+}
+
+message FileReferenceFromFileVariantGroup {
+  string file_variant_group_id = 1;
+  string file_id = 2;
+}
+
+// Reference to a file within a content
+message ContentFileReference {
+  // ID of the content
+  string content_id = 1;
+  // File reference that is part of any asset within the content
+  FileReferenceFromFileVariantGroup file_ref = 2;
+}
+
+message CharacterLookAssetFileReference {
+  // ID of the character look the asset is attached to.
+  string look_id = 1;
+  // ID of the asset within that look (`CharacterLookAsset.asset_id`).
+  string asset_id = 2;
+  // File reference that is part of that asset (a DERIVED file of one of the asset's groups).
+  FileReferenceFromFileVariantGroup file_ref = 3;
+}
+
+message CharacterPreviewAssetFileReference {
+  string character_id = 1;
+  // Must be one of the character's PREVIEW assets.
+  string asset_id = 2;
+  FileReferenceFromFileVariantGroup file_ref = 3;
+}
+
+message VoiceReferenceAudioFileReference {
+  // ID of the voice the reference audio belongs to.
+  string voice_id = 1;
+  // Must equal that voice's `reference_audio_asset_id`.
+  string asset_id = 2;
+  // File reference that is part of that asset (a DERIVED file of one of the asset's groups).
+  FileReferenceFromFileVariantGroup file_ref = 3;
+}

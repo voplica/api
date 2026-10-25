@@ -1,0 +1,348 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.files;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.files";
+option go_package = "voplica.com/api/files";
+option csharp_namespace = "Voplica.Api.Files";
+import "voplica/auth.proto";
+import "voplica/types/base/mime_type.proto";
+import "voplica/types/base/file_type.proto";
+import "voplica/types/base/asset_type.proto";
+import "voplica/types/base/readiness_status.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/file/upload/file_upload.proto";
+import "voplica/types/file/convert/file_convert.proto";
+import "voplica/types/file/upload/quota/file_upload_quota.proto";
+import "voplica/types/subscription/studio_subscription_type.proto";
+import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/base/content_moderation_status.proto";
+
+message InitFileUploadRequest {
+  // Total file size in bytes
+  int64 file_size = 1;
+  // Mime type of the file
+  voplica.types.base.MimeType mime_type = 2;
+  // Optional file name (example: hello.png)
+  optional string file_name = 3;
+  // Asset ID to which we should attach the uploaded file. Only Assets with `user_modifications_lock = UNLOCKED` can be used.
+  // If not provided - a new asset will be inferred from the file type.
+  // The automatically created asset will be automatically `locked` for user modifications.
+  optional string asset_id = 4;
+  // File type. If not provided then the file type is inferred from the provided mime_type implicitly
+  optional voplica.types.base.FileType file_type = 5;
+  // Why the file is being uploaded. Controls whether it appears in the user's
+  // "My Files" listing and whether it is treated as a transient/cleanable file.
+  // If not provided, defaults to PRIMARY (normal, visible, permanent).
+  // For hidden/transient inputs (e.g. inpainting masks) set SUPPORTING_METADATA and finalize the
+  // upload with convert_flow_type = OBJECT_DEFAULT to skip conversion.
+  optional voplica.types.file.upload.FileUploadPurpose purpose = 6;
+}
+
+message InitFileUploadResponse {
+  voplica.types.file.upload.FileUploadStartedInfo file_upload_info = 1;
+}
+
+message FinalizeFileUploadRequest {
+  string file_id = 1;
+  voplica.types.file.convert.ConvertFlowType convert_flow_type = 2;
+  repeated voplica.types.file.convert.ConvertParam convert_params = 3;
+}
+
+message FinalizeFileUploadResponse {
+  voplica.types.file.Asset asset = 1;
+}
+
+message GetFileUploadRequest {
+  string file_id = 1;
+}
+
+message GetFileUploadResponse {
+  voplica.types.file.upload.FileUploadInfo file_upload_info = 1;
+}
+
+message DeleteFileUploadRequest {
+  string file_id = 1;
+}
+
+message DeleteFileUploadResponse {
+}
+
+message GetFileInfoRequest {
+  string file_id = 1;
+}
+
+message GetFileInfoResponse {
+  voplica.types.file.FileInfo file = 1;
+}
+
+message GetMultiFileInfoRequest {
+  repeated string file_ids = 1;
+}
+
+message GetMultiFileInfoResponse {
+  repeated voplica.types.file.FileInfo files = 1;
+}
+
+message GetAssetRequest {
+  string asset_id = 1;
+}
+
+message GetAssetResponse {
+  voplica.types.file.Asset asset = 1;
+  optional string readiness_message = 2;
+}
+
+message GetMultiAssetRequest {
+  repeated string asset_ids = 1;
+}
+
+message GetMultiAssetResponse {
+  repeated voplica.types.file.Asset resources = 1;
+}
+
+message GetMultiFileVariantGroupRequest {
+  repeated string file_variant_group_ids = 1;
+}
+
+message GetMultiFileVariantGroupResponse {
+  repeated voplica.types.file.FileVariantGroup groups = 1;
+}
+
+message GetUserFileUploadsRequest {
+  // If not provided, owner_id will be taken from the request
+  optional string owner_id = 1;
+  int64 limit = 2;
+  // false - newest files first. true - oldest files first.
+  bool asc_sort = 3;
+  // If no provided - all file types are used
+  optional voplica.types.base.FileType file_type = 4;
+  // if not provided - all upload statuses are used
+  optional voplica.types.file.upload.FileUploadStatus statuses = 5;
+  optional voplica.types.file.upload.FileUploadPurpose purpose = 6;
+  // to continue pagination use `next_token` with `before_cursor = false` to fetch the next page or
+  // `prev_token` with `before_cursor = true` to fetch the previous page.
+  optional string cursor = 10;
+  // Used only with `cursor`. If `false` it means fetch data after cursor. If `true` it means fetch data before cursor.
+  bool before = 11;
+  // Check limit + 1 to know if there is more data available
+  // By default is is `false`. Meaning that `more_available` flag won't be returned.
+  // In this case, the only way to verify that there is any data available is to fetch the next page.
+  // Generally this should not be used for infinite scrolls, but can be used if we have buttons like `next`, `previous`.
+  bool check_more_available = 12;
+}
+
+message GetUserFileUploadsResponse {
+  repeated voplica.types.file.upload.FileUploadInfo file_uploads = 1;
+  // Token to pass in the next query's Pagination directive to go to the next page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  // If it's missing the last used cursor is essentially the `next_token`
+  optional string next_token = 2;
+  // Token to pass in the next query's Pagination directive to go to the previous page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  // If it's missing the last used cursor is essentially the `prev_token`
+  optional string prev_token = 3;
+  // Returns if there is more data available (i.e. checks `limit + 1`).
+  // Returned only if `check_more_available` is set to `true`
+  optional bool more_available = 4;
+}
+
+message ListAssetVariantsRequest {
+  string asset_id = 1;
+  repeated voplica.types.file.FileVariantFilter file_variant_filter = 10;
+}
+
+message ListAssetVariantsResponse {
+  voplica.types.base.ReadinessStatus readiness_status = 1;
+  repeated voplica.types.file.FileVariantGroup file_variant_groups = 2;
+  voplica.types.base.AssetType asset_type = 3;
+  optional voplica.types.base.MPARating mpa_rating = 4;
+  voplica.types.base.ContentModerationStatus moderation_status = 5;
+  optional string readiness_message = 6;
+  bool hidden_from_non_owners = 7;
+  bool mpa_publication_pending = 8;
+}
+
+message ListRegistryAssetVariantsRequest {
+  // key of the pre-defined assets in the static registry
+  string registry_key = 1;
+  repeated voplica.types.file.FileVariantFilter file_variant_filter = 10;
+}
+
+message ListRegistryAssetVariantsResponse {
+  voplica.types.file.AssetFileVariantGroups asset_files = 1;
+}
+
+message GetSourceFileOfGroupRequest {
+  string file_variant_group_id = 1;
+}
+
+message GetSourceFileOfGroupResponse {
+  // source_file may be null if it was removed
+  optional voplica.types.file.FileInfo source_file = 1;
+}
+
+message GetFileUploadQuotaPlanRequest {
+  // If not provided - all plans will be returned
+  // If provided - only selected plans will be returned
+  repeated voplica.types.file.upload.quota.FileUploadQuotaPlan quota_plans = 1;
+}
+
+message GetFileUploadQuotaPlanResponse {
+  repeated voplica.types.file.upload.quota.FileUploadQuotaPlanInfo quota_plans_info = 1;
+}
+
+message GetUserFileUploadQuotaPlanRequest {
+  // If not provided the ID is taken from the authentication token
+  optional string user_id = 1;
+}
+
+message GetUserFileUploadQuotaPlanResponse {
+  voplica.types.file.upload.quota.FileUploadQuotaInfo quota_info = 1;
+  voplica.types.file.upload.quota.FileUploadQuotaPlan admin_plan = 2;
+  // The plan the user's subscription tier grants (files' tier -> plan map).
+  voplica.types.file.upload.quota.FileUploadQuotaPlan tier_plan = 3;
+  // The subscription tier tier_plan was derived from (FREE when unknown).
+  voplica.types.subscription.StudioSubscriptionType subscription_type = 4;
+}
+
+message SetAssetMpaRatingRequest {
+  string asset_id = 1;
+  voplica.types.base.MPARating mpa_rating = 2;
+}
+
+message SetAssetMpaRatingResponse {
+  voplica.types.file.Asset asset = 1;
+}
+
+message GetCreatorAllowanceConfigRequest {
+}
+
+message GetCreatorAllowanceConfigResponse {
+  uint64 default_allowance_bytes = 1;
+}
+
+service FilesService {
+  // 1. Initialize file upload (intend to upload a file).
+  rpc InitFileUpload (InitFileUploadRequest) returns (InitFileUploadResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // 3. Finalize file upload.
+  rpc FinalizeFileUpload (FinalizeFileUploadRequest) returns (FinalizeFileUploadResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Get file upload information.
+  // It is also useful in case the upload was interrupted and it's unclear what bytes left to be sent.
+  // In this case the offset should be equal to `uploaded_bytes`
+  rpc GetFileUpload (GetFileUploadRequest) returns (GetFileUploadResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeleteFileUpload (DeleteFileUploadRequest) returns (DeleteFileUploadResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Get File Uploads.
+  rpc GetUserFileUploads (GetUserFileUploadsRequest) returns (GetUserFileUploadsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // List asset variants to use best on provided filters
+  rpc ListAssetVariants (ListAssetVariantsRequest) returns (ListAssetVariantsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // List static asset variants via registry key to use best on provided filters
+  rpc ListRegistryAssetVariants (ListRegistryAssetVariantsRequest) returns (ListRegistryAssetVariantsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Get Asset by id.
+  rpc GetAsset (GetAssetRequest) returns (GetAssetResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Get Source File by FileVariantGroup id.
+  rpc GetSourceFileOfGroup (GetSourceFileOfGroupRequest) returns (GetSourceFileOfGroupResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Get File Info by id.
+  rpc GetFileInfo (GetFileInfoRequest) returns (GetFileInfoResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Get available platform's file upload quota plan info
+  rpc GetFileUploadQuotaPlan (GetFileUploadQuotaPlanRequest) returns (GetFileUploadQuotaPlanResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Get used file upload quota info for the user
+  rpc GetUserFileUploadQuotaPlan (GetUserFileUploadQuotaPlanRequest) returns (GetUserFileUploadQuotaPlanResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Get File Info for multiple ids.
+  rpc GetMultiFileInfo (GetMultiFileInfoRequest) returns (GetMultiFileInfoResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Get Asset for multiple ids.
+  rpc GetMultiAsset (GetMultiAssetRequest) returns (GetMultiAssetResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetMultiFileVariantGroup (GetMultiFileVariantGroupRequest) returns (GetMultiFileVariantGroupResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetCreatorAllowanceConfig (GetCreatorAllowanceConfigRequest) returns (GetCreatorAllowanceConfigResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc SetAssetMpaRating (SetAssetMpaRatingRequest) returns (SetAssetMpaRatingResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+}

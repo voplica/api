@@ -1,0 +1,10 @@
+# Written by scripts/generate.py (from ../../proto, ../../VERSION and ../../LICENSE) and by the build; never committed.
+/voplica/
+/VERSION
+/LICENSE
+/build/
+/dist/
+/*.egg-info/
+__pycache__/
+# The venv of README.md's "Generate it yourself".
+/.venv/

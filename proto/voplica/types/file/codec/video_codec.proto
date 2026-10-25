@@ -1,0 +1,58 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.file.codec;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.file.codec";
+option go_package = "voplica.com/types/file/codec";
+option csharp_namespace = "Voplica.Types.File.Codec";
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.EnumValueOptions {
+  optional VideoCodecExtension video_codec_extension = 50102;
+}
+
+enum VideoCodecType {
+  VIDEO_CODEC_TYPE_UNSPECIFIED = 0 [(video_codec_extension) = { name: "unspecified", lib: "unspecified" }];
+  // Common modern / web codecs
+  VIDEO_CODEC_H264 = 1 [(video_codec_extension) = { name: "h264", lib: "libx264" }];
+  VIDEO_CODEC_H265 = 2 [(video_codec_extension) = { name: "hevc", lib: "libx265" }]; // ffprobe often shows "hevc"
+  VIDEO_CODEC_H265_LEGACY = 3 [(video_codec_extension) = { name: "h265", lib: "libx265" }]; // alternate string seen in some tools
+  VIDEO_CODEC_VP8 = 4 [(video_codec_extension) = { name: "vp8", lib: "libvpx" }];
+  VIDEO_CODEC_VP9 = 5 [(video_codec_extension) = { name: "vp9", lib: "libvpx-vp9" }];
+  VIDEO_CODEC_AV1 = 6 [(video_codec_extension) = { name: "av1", lib: "libaom-av1" }];
+  VIDEO_CODEC_AV01 = 7 [(video_codec_extension) = { name: "av01", lib: "libaom-av1" }]; // alternate string
+  // MPEG family
+  VIDEO_CODEC_MPEG2VIDEO = 8 [(video_codec_extension) = { name: "mpeg2video", lib: "native" }];
+  VIDEO_CODEC_MPEG4 = 9 [(video_codec_extension) = { name: "mpeg4", lib: "native" }];
+  // Microsoft / Windows Media / VC-1
+  VIDEO_CODEC_VC1 = 10 [(video_codec_extension) = { name: "vc1", lib: "native" }];
+  VIDEO_CODEC_WMV3 = 11 [(video_codec_extension) = { name: "wmv3", lib: "native" }];
+  // Intra-frame / editing / mezzanine codecs
+  VIDEO_CODEC_PRORES = 12 [(video_codec_extension) = { name: "prores", lib: "prores" }];
+  VIDEO_CODEC_DNXHD = 13 [(video_codec_extension) = { name: "dnxhd", lib: "dnxhd" }];
+  VIDEO_CODEC_DNXHR = 14 [(video_codec_extension) = { name: "dnxhr", lib: "dnxhr" }];
+  VIDEO_CODEC_PRORES_RAW = 15 [(video_codec_extension) = { name: "prores_ks", lib: "prores" }]; // alternate prores encoder string
+  // Lossless / archival / studio codecs
+  VIDEO_CODEC_FFV1 = 16 [(video_codec_extension) = { name: "ffv1", lib: "native" }];
+  VIDEO_CODEC_HUFFYUV = 17 [(video_codec_extension) = { name: "huffyuv", lib: "native" }];
+  VIDEO_CODEC_LJPEG = 18 [(video_codec_extension) = { name: "ljpeg", lib: "native" }];
+  // Motion JPEG / image-based codecs
+  VIDEO_CODEC_MJPEG = 19 [(video_codec_extension) = { name: "mjpeg", lib: "native" }];
+  // Old / niche / broadcast codecs
+  VIDEO_CODEC_THEORA = 20 [(video_codec_extension) = { name: "theora", lib: "libtheora" }];
+  VIDEO_CODEC_DIRAC = 21 [(video_codec_extension) = { name: "dirac", lib: "native" }];
+  VIDEO_CODEC_CINEPAK = 22 [(video_codec_extension) = { name: "cinepak", lib: "native" }];
+  // Raw / uncompressed video
+  VIDEO_CODEC_RAWVIDEO = 23 [(video_codec_extension) = { name: "rawvideo", lib: "native" }];
+  // Other / catch-all
+  VIDEO_CODEC_OTHER = 50000 [(video_codec_extension) = { name: "other", lib: "native" }];
+}
+
+message VideoCodecExtension {
+  string name = 1;
+  string lib = 2;
+}

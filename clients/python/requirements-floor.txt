@@ -1,0 +1,3 @@
+# The oldest runtime pyproject.toml admits, which the workflow's oldest-runtime test installs beside the wheel.
+protobuf==6.33.5
+grpcio==1.80.0

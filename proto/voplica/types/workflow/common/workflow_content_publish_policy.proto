@@ -1,0 +1,40 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.workflow.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.workflow.common";
+option go_package = "voplica.com/types/workflow/common";
+option csharp_namespace = "Voplica.Types.Workflow.Common";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/content/provenance_display_level.proto";
+import "voplica/types/workflow/common/workflow_content_publish_stage.proto";
+
+// Controls how generated content is published during workflow execution.
+//
+// When a workflow step marked as publishable (via WorkflowStepContentConfig) completes,
+// the system uses this policy to determine whether and how to create content records.
+//
+// If not provided in ExecuteWorkflowRequest, the default behavior is:
+// - enabled = true (content is auto-created for publishable steps)
+// - auto_publish_final = false (all content starts as DRAFT)
+// - visibility and MPA rating inherited from the workflow execution
+message WorkflowContentPublishPolicy {
+  // If unspecified - if not set, inherits from the workflow variant `default_publish_stage`.
+  optional WorkflowContentPublishStage publish_stage = 1;
+  // Visibility for auto-created content. If not set, inherits from the workflow
+  // execution's visibility setting.
+  optional voplica.types.base.VisibilityType default_visibility = 2;
+  // MPA rating for auto-created content.
+  // If the content is detected to be produced with higher-level mpa_rating this content will not be auto-published.
+  // If not set - allow any mpa_rating publishing.
+  optional voplica.types.base.MPARating expected_mpa_rating = 3;
+  // Provenance display level for auto-created content. If not set, defaults to FULL
+  // (all provenance metadata is visible to everyone).
+  optional voplica.types.content.ProvenanceDisplayLevel default_provenance_display_level = 4;
+}

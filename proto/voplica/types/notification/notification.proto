@@ -1,0 +1,244 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.notification;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.notification";
+option go_package = "voplica.com/types/notification";
+option csharp_namespace = "Voplica.Types.Notification";
+import "voplica/types/file/upload/file_upload.proto";
+import "voplica/types/file/upload/quota/file_upload_quota.proto";
+import "voplica/types/payment/payment.proto";
+import "voplica/types/subscription/studio_subscription_type.proto";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/base/content_moderation_status.proto";
+import "voplica/types/base/entity_ref.proto";
+import "voplica/types/base/verification_status.proto";
+import "voplica/types/workflow/common/workflow_termination_reason.proto";
+import "voplica/types/ai/training/training.proto";
+
+enum NotificationStatus {
+  NOTIFICATION_STATUS_UNSPECIFIED = 0;
+  UNSEEN = 1;
+  SEEN = 2;
+}
+
+message StorageQuotaNotification {
+  voplica.types.file.upload.quota.StorageEnforcementState enforcement = 1;
+  // Bytes over the personal ceiling at the moment of the transition, 0 when back under.
+  uint64 over_by_bytes = 2;
+  // When the grace ends (epoch millis), 0 when not applicable.
+  uint64 grace_expires_at = 3;
+  // The ceiling that was exceeded, so the message can say "of 100 GB" without a second call.
+  uint64 personal_limit_bytes = 4;
+  string notice_text = 5;
+}
+
+message Notification {
+  string notification_id = 1; // Unique ID for the notification.
+  int64 timestamp = 2; // Unix timestamp when notification was created
+  NotificationStatus status = 3; // If notification was seen already by the user or not
+  NotificationPayload payload = 4; // payload of a specific notification type
+}
+
+message NotificationPayload {
+  // Use oneof to carry one of the specific notification payloads.
+  oneof type {
+    FileUploadStatusNotification file_upload_status = 10;
+    PaymentNotification payment = 11;
+    SubscriptionUpdateNotification subscription_type = 12;
+    DatasetPreparationStatusNotification dataset_preparation_status = 13;
+    ModelTrainingJobStatusNotification model_training_status = 14;
+    ModelTrainingNewCheckpointNotification model_training_new_checkpoint = 15;
+    ModelTrainingNewSamplesNotification model_training_new_samples = 16;
+    ModelVariantFilesStatusNotification model_variant_files_status = 17;
+    WorkflowExecutionStatusNotification workflow_execution_status = 18;
+    WorkflowStepIterationResultNotification workflow_step_iteration_result = 19;
+    ModelTrainingStatsUpdateNotification model_training_stats_update = 20;
+    ContentModerationNotification content_moderation = 21;
+    StorageQuotaNotification storage_quota = 22;
+    AssetModerationNotification asset_moderation = 23;
+    SupportIssueNotification support_issue = 24;
+    // Not implemented yet
+    LikeNotification like = 30;
+    CommentNotification comment = 31;
+    MessageNotification message = 32;
+  }
+}
+
+// Notification for a "like" event.
+message LikeNotification {
+  // ID of the user who liked a specific resource. If many users liked then this may contain several user ids, but not necessary all ids.
+  // This is useful to show notification like:
+  // userA, userB, userC and 12345 more users liked you post.
+  repeated string liker_id = 1;
+  string resource_id = 2; // ID of the post or resource that was liked.
+  // How many users liked your resource since last update. This is not a total amount of likes, but simply difference
+  // from the last notification about this resource.
+  int64 counter = 3;
+}
+
+// Notification for a comment.
+message CommentNotification {
+  string comment_id = 1;
+  string commenter_id = 2; // From whom
+  string resource_id = 3; // ID of the post or resource commented on.
+  string comment = 4;
+}
+
+// Notification for a new direct message.
+message MessageNotification {
+  string message_id = 1;
+  string from_user_id = 2;
+  string message = 3;
+}
+
+// Notification for file upload status change.
+message FileUploadStatusNotification {
+  string file_id = 1;
+  voplica.types.file.upload.FileUploadStatus status = 2;
+  // If `status` is `COMPLETED` is will contain asset id to which the uploaded file was assigned
+  optional string asset_id = 3;
+  // If `status` is `FAILED` it may contain error message here.
+  optional string message = 4;
+}
+
+// Notification for payment status update.
+message PaymentNotification {
+  voplica.types.payment.Payment payment = 1;
+}
+
+// Notification for payment status update.
+message SubscriptionUpdateNotification {
+  voplica.types.subscription.StudioSubscriptionType from_type = 1;
+  voplica.types.subscription.StudioSubscriptionType to_type = 2;
+}
+
+// Notification for dataset preparation run status change. Carries only ids + status; the
+// client re-fetches the run/preparation for details.
+message DatasetPreparationStatusNotification {
+  string dataset_id = 1;
+  voplica.types.base.JobStatus status = 2;
+  // If `status` is `FAILED` it may contain error message here.
+  optional string message = 3;
+  // The mutable preparation the run writes into.
+  string preparation_id = 4;
+  // The preparation run whose status changed.
+  string preparation_run_id = 5;
+}
+
+// Notification for model training job status change.
+message ModelTrainingJobStatusNotification {
+  string model_training_job_id = 1;
+  voplica.types.base.JobStatus status = 2;
+  // If `status` is `FAILED` it may contain error message here.
+  optional string message = 3;
+  // The run whose lifecycle produced this status, when the change is run-scoped
+  // (started / terminal). Empty for pure job-level changes.
+  optional string model_training_run_id = 4;
+}
+
+// Notification that a new training checkpoint was saved and registered. Carries ids + step
+// only; the client re-fetches the checkpoint (hydrated) via `GetModelTrainingCheckpoint` /
+// `ListModelTrainingCheckpoints`.
+message ModelTrainingNewCheckpointNotification {
+  string model_training_job_id = 1;
+  string model_training_run_id = 2;
+  string checkpoint_id = 3;
+  // Training step at which the checkpoint was saved.
+  uint64 step = 4;
+  // The `ModelVariant` minted for this checkpoint, when the job trains into an output model.
+  optional string model_variant_id = 5;
+}
+
+// Notification that a new group of samples was generated during model training. Carries ids
+// + step only; the client re-fetches the group with a files retriever to render previews.
+message ModelTrainingNewSamplesNotification {
+  string model_training_job_id = 1;
+  string model_training_run_id = 2;
+  string samples_group_id = 3;
+  // Training step at which the samples were generated.
+  uint64 step = 4;
+  uint32 samples_count = 5;
+  // Checkpoint the group was produced alongside (sample-after-save), when any.
+  optional string checkpoint_id = 6;
+}
+
+// Live training progress snapshot. Unlike the id-only notifications above this embeds the
+// (small) stats payload so dashboards can render progress without a follow-up read; metric
+// HISTORY still comes from `ListModelTrainingMetricsPoints`. Server-side throttled.
+message ModelTrainingStatsUpdateNotification {
+  string model_training_job_id = 1;
+  string model_training_run_id = 2;
+  voplica.types.ai.training.ModelTrainingJobStats stats = 3;
+}
+
+// Notification for a content moderation state change (e.g. auto-flagged + force-unpublished,
+// or an admin decision). Carries ids + status only; the client re-fetches the content for details.
+message ContentModerationNotification {
+  string content_id = 1;
+  voplica.types.base.ContentModerationStatus moderation_status = 2;
+  // The rating the platform's analysis determined, when available.
+  voplica.types.base.MPARating analyzed_mpa_rating = 3;
+  // Short human-readable reason (e.g. the analysis' rating_reason).
+  string reason = 4;
+}
+
+message AssetModerationNotification {
+  string asset_id = 1;
+  voplica.types.base.EntityRef entity_ref = 2;
+  voplica.types.base.ContentModerationStatus moderation_status = 3;
+  // The asset's rating at the moment of the change (the visible one, never the analysis record).
+  voplica.types.base.MPARating mpa_rating = 4;
+  // Short human-readable reason (the analysis' rating_reason, or the admin's note).
+  string reason = 5;
+}
+
+enum SupportIssueUpdateKind {
+  SUPPORT_ISSUE_UPDATE_KIND_UNSPECIFIED = 0;
+  SUPPORT_ISSUE_UPDATE_REPLIED = 1;
+  SUPPORT_ISSUE_UPDATE_CLOSED = 2;
+  SUPPORT_ISSUE_UPDATE_REOPENED = 3; // an admin reply on a closed issue
+}
+
+message SupportIssueNotification {
+  string issue_id = 1;
+  SupportIssueUpdateKind kind = 2;
+}
+
+// Notification for dataset preparation status change.
+message ModelVariantFilesStatusNotification {
+  string model_variant_id = 1;
+  voplica.types.base.JobStatus job_status = 2;
+  voplica.types.base.VerificationStatus files_verification_status = 3;
+  // If `job_status` is `FAILED` or `files_verification_status` is `VERIFICATION_INVALID` it may contain error message here.
+  optional string message = 4;
+}
+
+// Notification for workflow execution status change.
+// Sent when the workflow execution transitions between states (PENDING -> RUNNING -> COMPLETED/FAILED/CANCELLED).
+message WorkflowExecutionStatusNotification {
+  string workflow_execution_id = 1;
+  string workflow_variant_id = 2;
+  voplica.types.base.JobStatus status = 3;
+  // Provided when the workflow execution is finished (COMPLETED, FAILED, or CANCELLED).
+  optional voplica.types.workflow.common.WorkflowTerminationReason termination_reason = 4;
+  // Optional message providing additional context (e.g. failure reason).
+  optional string message = 5;
+}
+
+// Notification that a step iteration within a workflow execution has completed and produced output.
+// This enables real-time partial results: clients can fetch full output data via GetWorkflowStepOutputs API.
+// Does NOT include the full output data (could be large) - only identifiers for the client to fetch if needed.
+message WorkflowStepIterationResultNotification {
+  string workflow_execution_id = 1;
+  uint32 step_id = 2;
+  uint32 iteration_number = 3;
+  // Status of the step iteration (COMPLETED or FAILED).
+  voplica.types.base.JobStatus step_status = 4;
+}

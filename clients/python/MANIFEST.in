@@ -1,0 +1,4 @@
+# setuptools puts in the source distribution what a wheel is built from: the generated package with its stubs and
+# py.typed, pyproject.toml, the VERSION file it reads, README.md and LICENSE. The tests read the repository (proto/,
+# the workflow), so they stay out.
+prune tests

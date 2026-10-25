@@ -1,0 +1,26 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.workflow.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.workflow.common";
+option go_package = "voplica.com/types/workflow/common";
+option csharp_namespace = "Voplica.Types.Workflow.Common";
+
+// Indicates what assets should be auto-published during Workflow Execution
+enum WorkflowContentPublishStage {
+  WORKFLOW_CONTENT_PUBLISH_STAGE_UNSPECIFIED = 0;
+  // Do not publish any assets in the current Workflow Execution
+  STAGE_NONE = 1;
+  // Publish only the latest produced asset by any Step in Root Workflow Execution.
+  // This will be evaluated when the Workflow Execution executed all Steps and turning into COMPLETE status.
+  STAGE_ROOT_LAST_ASSET = 2;
+  // Publish all assets that were produced in the Root Workflow Execution.
+  STAGE_ROOT_ONLY_ASSETS = 3;
+  // Publish all produced assets - including all assets in Child Workflows Executions.
+  STAGE_ALL_ASSETS = 4;
+}

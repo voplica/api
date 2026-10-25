@@ -1,0 +1,46 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.common";
+option go_package = "voplica.com/types/ai/common";
+option csharp_namespace = "Voplica.Types.Ai.Common";
+
+// What ONE file inside a model variant's asset IS. A variant holds exactly one primary
+// (ROLE_MODEL_WEIGHTS / ROLE_DIFFUSION_WEIGHTS / ROLE_FULL_CHECKPOINT / ROLE_LORA /
+// ROLE_CONTROLNET) plus any companions (ROLE_VAE, ROLE_TEXT_ENCODER).
+//
+// The role is DECLARED at registration by the importer (ConvertParamType.MODEL_GEN_ROLE_ID ->
+// voplica.types.file.ModelGenInfo.role) and LEARNED again, per file, by the model-files
+// verification from the tensors themselves. The learned value wins at read time.
+//
+// Every value carries the ROLE_ prefix on purpose: protobuf scopes enum VALUE names to the
+// enclosing PACKAGE, and voplica.types.ai.common.ModelType already declares LORA, CONTROLNET,
+// VAE and UPSCALER (model_type.proto). Bare names would not compile.
+enum ModelFileRole {
+  MODEL_FILE_ROLE_UNSPECIFIED = 0;
+  // The variant's main weights, kind not yet learned - what the IMPORTER declares before any
+  // tensor has been read. Also what a LoRA/ControlNet file declares at import: "the main weights
+  // of whatever this model is".
+  ROLE_MODEL_WEIGHTS = 1;
+  // Learned: diffusion transformer / unet only. Everything else comes from the donor
+  // (based_on_model_variant_id) or from companions in the same asset.
+  ROLE_DIFFUSION_WEIGHTS = 2;
+  // Learned: several components (transformer + VAE and/or text encoders) in one file.
+  ROLE_FULL_CHECKPOINT = 3;
+  ROLE_VAE = 4;
+  // component_name says which diffusers slot this encoder fills
+  // ("text_encoder", "text_encoder_2", ...).
+  ROLE_TEXT_ENCODER = 5;
+  ROLE_LORA = 6;
+  ROLE_CONTROLNET = 7;
+  ROLE_UPSCALER = 8;
+  // json/yaml. Never imported - kept so a refusal can be honest about what the file was.
+  ROLE_CONFIG = 9;
+  ROLE_OTHER = 10;
+}

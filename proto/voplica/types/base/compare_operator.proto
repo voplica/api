@@ -1,0 +1,25 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.base;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.base";
+option go_package = "voplica.com/types/base";
+option csharp_namespace = "Voplica.Types.Base";
+
+enum CompareOperator {
+  COMPARE_OPERATOR_UNSPECIFIED = 0;
+  // Can be applied to a single or multiple values
+  IN = 1;
+  EQ = 2;
+  NE = 3;
+  // Single value applicable only
+  GT = 4;
+  LT = 5;
+  GTE = 6;
+  LTE = 7;
+}

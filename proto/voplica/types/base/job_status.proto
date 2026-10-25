@@ -1,0 +1,23 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.base;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.base";
+option go_package = "voplica.com/types/base";
+option csharp_namespace = "Voplica.Types.Base";
+import "voplica/common.proto";
+
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0 [(label) = "unspecified"];
+  PENDING = 1 [(label) = "pending"];
+  RUNNING = 2 [(label) = "running"];
+  COMPLETED = 3 [(label) = "completed"];
+  FAILED = 4 [(label) = "failed"];
+  CANCELLED = 5 [(label) = "cancelled"];
+  CANCELLING = 6 [(label) = "cancelling"];
+}

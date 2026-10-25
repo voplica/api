@@ -1,0 +1,94 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.dataset;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.dataset";
+option go_package = "voplica.com/types/ai/dataset";
+option csharp_namespace = "Voplica.Types.Ai.Dataset";
+import "voplica/types/base/job_status.proto";
+
+enum DatasetGenerationSizeClass {
+  // Absent/unset. Treated as MEDIUM (~1 MP), the FE default class.
+  DATASET_GENERATION_SIZE_CLASS_UNSPECIFIED = 0;
+  // ~0.25 megapixels.
+  DATASET_GENERATION_SIZE_CLASS_SMALL = 1;
+  // ~1 megapixel. The default class.
+  DATASET_GENERATION_SIZE_CLASS_MEDIUM = 2;
+  // ~2 megapixels.
+  DATASET_GENERATION_SIZE_CLASS_LARGE = 3;
+  // ~4 megapixels.
+  DATASET_GENERATION_SIZE_CLASS_EXTRA_LARGE = 4;
+}
+
+// Tuning for one dataset generation run. Frozen onto the run at trigger time and forwarded to the
+// worker verbatim - the worker never re-resolves them.
+message DatasetGenerationParams {
+  // How many images the run should produce in total (across all selected looks). The shot matrix
+  // is capped to this count. 0 is invalid and treated as absent (the service applies its default)
+  // - never a truthiness check.
+  uint32 image_count = 1;
+  // Output size class. UNSPECIFIED = MEDIUM (~1 MP). The worker maps the class to dimensions.
+  DatasetGenerationSizeClass size_class = 2;
+  // The skin-texture refine pass after each generated image. DEFAULT IS TRUE, which is not the proto3 bool default:
+  // absent means true, and only an explicit false disables it - read it with a presence check.
+  optional bool refine = 3;
+  // Explicit edit-model variant id. Absent = the default edit model family (QWEN_IMAGE_EDIT_2511). An explicit
+  // variant wins.
+  optional string edit_model_variant_id = 4;
+  // Coverage toggles. When true, the deterministic shot matrix additionally varies the axis;
+  // when false the axis is held at its neutral value. Both widen the matrix, so a fixed
+  // `image_count` spreads across more combinations rather than producing more images.
+  bool cover_emotions = 5;
+  bool cover_environments = 6;
+}
+
+// Process-lineage record for one dataset generation run: "this execution rendered THESE looks of
+// THIS character into THAT dataset". One run == one workflow execution == one engine idempotency
+// key (the run id is a 26-char ULID and passes through `toEngineIdempotencyKey` untouched).
+message DatasetGenerationRun {
+  string id = 1;
+  // The IMAGE_ASSET dataset the generated images are attached to. Always populated - for an
+  // inline-new-dataset request the service creates the dataset BEFORE the run row, so a run
+  // never exists without its target.
+  string dataset_id = 2;
+  // The character whose identity every shot is conditioned on.
+  string character_id = 3;
+  repeated string look_ids = 4;
+  // User who triggered the run, pays for it, and owns every file/asset it produces.
+  string owner_id = 5;
+  // Frozen tuning for this run.
+  DatasetGenerationParams params = 6;
+  // Lifecycle state. PENDING at creation, RUNNING once the workflow reports started, then
+  // COMPLETED/FAILED/CANCELLED. The Workflow Engine wins over worker-reported terminal status
+  // (the worker's `message` and counts are still persisted).
+  voplica.types.base.JobStatus state = 7;
+  optional string workflow_execution_id = 8;
+  // Root workflow execution that triggered this run - the wrapper execution the user is billed
+  // for. Populated at trigger time.
+  string root_workflow_execution_id = 9;
+  // How many images the run intends to produce (the planned shot count after capping by
+  // `params.image_count`).
+  uint32 requested_images_count = 10;
+  uint32 generated_images_count = 11;
+  // Shots that failed. Per-shot failures are isolated - one failed shot never fails the run;
+  // an all-failed run terminates FAILED.
+  uint32 failed_images_count = 12;
+  // Face-confidence aggregates over the images that carried a score (scored after refine, against the look's
+  // FACE_CLOSEUP baseline). Absent while no image has been scored. A low score never fails or retries a run: it is a
+  // quality signal to read before training.
+  optional float face_confidence_avg = 13;
+  optional float face_confidence_min = 14;
+  // Epoch milliseconds.
+  uint64 created_at = 15;
+  // When the workflow actually began executing. Absent while PENDING.
+  optional uint64 started_at = 16;
+  // When the run reached a terminal state. Absent until then.
+  optional uint64 completed_at = 17;
+  // Terminal detail (failure reason, cancellation note, all-failed summary).
+  optional string message = 18;
+}

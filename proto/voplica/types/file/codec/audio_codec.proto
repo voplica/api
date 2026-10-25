@@ -1,0 +1,68 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.file.codec;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.file.codec";
+option go_package = "voplica.com/types/file/codec";
+option csharp_namespace = "Voplica.Types.File.Codec";
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.EnumValueOptions {
+  optional AudioCodecExtension audio_codec_extension = 50101;
+}
+
+enum AudioCodecType {
+  AUDIO_CODEC_TYPE_UNSPECIFIED = 0 [(audio_codec_extension) = { name: "unspecified", lib: "unspecified" }];
+  // Common modern codecs
+  AUDIO_CODEC_AAC = 1 [(audio_codec_extension) = { name: "aac", lib: "libfdk_aac" }];
+  AUDIO_CODEC_OPUS = 2 [(audio_codec_extension) = { name: "opus", lib: "libopus" }];
+  AUDIO_CODEC_VORBIS = 3 [(audio_codec_extension) = { name: "vorbis", lib: "libvorbis" }];
+  AUDIO_CODEC_MP3 = 4 [(audio_codec_extension) = { name: "mp3", lib: "libmp3lame" }];
+  AUDIO_CODEC_FLAC = 5 [(audio_codec_extension) = { name: "flac", lib: "flac" }];
+  AUDIO_CODEC_ALAC = 6 [(audio_codec_extension) = { name: "alac", lib: "alac" }];
+  // PCM (uncompressed) variants commonly seen in WAV/AIFF
+  AUDIO_CODEC_PCM_S16LE = 7 [(audio_codec_extension) = { name: "pcm_s16le", lib: "native" }];
+  AUDIO_CODEC_PCM_S24LE = 8 [(audio_codec_extension) = { name: "pcm_s24le", lib: "native" }];
+  AUDIO_CODEC_PCM_S32LE = 9 [(audio_codec_extension) = { name: "pcm_s32le", lib: "native" }];
+  AUDIO_CODEC_PCM_U8 = 10 [(audio_codec_extension) = { name: "pcm_u8", lib: "native" }];
+  AUDIO_CODEC_PCM_S8 = 11 [(audio_codec_extension) = { name: "pcm_s8", lib: "native" }];
+  AUDIO_CODEC_PCM_F32LE = 12 [(audio_codec_extension) = { name: "pcm_f32le", lib: "native" }];
+  AUDIO_CODEC_PCM_F64LE = 13 [(audio_codec_extension) = { name: "pcm_f64le", lib: "native" }];
+  AUDIO_CODEC_PCM_MULAW = 14 [(audio_codec_extension) = { name: "pcm_mulaw", lib: "native" }];
+  AUDIO_CODEC_PCM_ALAW = 15 [(audio_codec_extension) = { name: "pcm_alaw", lib: "native" }];
+  // ADPCM family (often in legacy WAV / container formats)
+  AUDIO_CODEC_ADPCM_IMA_WAV = 16 [(audio_codec_extension) = { name: "adpcm_ima_wav", lib: "native" }];
+  AUDIO_CODEC_ADPCM_MS = 17 [(audio_codec_extension) = { name: "adpcm_ms", lib: "native" }];
+  AUDIO_CODEC_ADPCM_IMA_QT = 18 [(audio_codec_extension) = { name: "adpcm_ima_qt", lib: "native" }];
+  AUDIO_CODEC_ADPCM_G726 = 19 [(audio_codec_extension) = { name: "adpcm_g726", lib: "native" }];
+  AUDIO_CODEC_ADPCM_G722 = 20 [(audio_codec_extension) = { name: "g722", lib: "native" }];
+  // Surround / broadcast / cinema codecs
+  AUDIO_CODEC_AC3 = 21 [(audio_codec_extension) = { name: "ac3", lib: "native" }];
+  AUDIO_CODEC_EAC3 = 22 [(audio_codec_extension) = { name: "eac3", lib: "native" }];
+  AUDIO_CODEC_TRUEHD = 23 [(audio_codec_extension) = { name: "truehd", lib: "native" }];
+  AUDIO_CODEC_DTS = 24 [(audio_codec_extension) = { name: "dts", lib: "native" }];
+  AUDIO_CODEC_DTS_HD = 25 [(audio_codec_extension) = { name: "dts_hd", lib: "native" }];
+  // MPEG audio family
+  AUDIO_CODEC_MP2 = 26 [(audio_codec_extension) = { name: "mp2", lib: "native" }];
+  // Mobile / telephony codecs
+  AUDIO_CODEC_AMR_NB = 27 [(audio_codec_extension) = { name: "amr_nb", lib: "native" }];
+  AUDIO_CODEC_AMR_WB = 28 [(audio_codec_extension) = { name: "amr_wb", lib: "native" }];
+  // Microsoft / Windows Media Audio
+  AUDIO_CODEC_WMAV1 = 29 [(audio_codec_extension) = { name: "wmav1", lib: "native" }];
+  AUDIO_CODEC_WMAV2 = 30 [(audio_codec_extension) = { name: "wmav2", lib: "native" }];
+  AUDIO_CODEC_WMAPRO = 31 [(audio_codec_extension) = { name: "wmapro", lib: "native" }];
+  // Other / niche lossless or speech codecs
+  AUDIO_CODEC_TTA = 32 [(audio_codec_extension) = { name: "tta", lib: "native" }];
+  AUDIO_CODEC_TAK = 33 [(audio_codec_extension) = { name: "tak", lib: "native" }];
+  AUDIO_CODEC_SPEEX = 34 [(audio_codec_extension) = { name: "speex", lib: "libspeex" }];
+  AUDIO_CODEC_OTHER = 50000 [(audio_codec_extension) = { name: "other", lib: "native" }];
+}
+
+message AudioCodecExtension {
+  string name = 1;
+  string lib = 2;
+}

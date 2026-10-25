@@ -1,0 +1,108 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.base;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.base";
+option go_package = "voplica.com/types/base";
+option csharp_namespace = "Voplica.Types.Base";
+import "voplica/types/base/file_type.proto";
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.EnumValueOptions {
+  optional ContentPresentationTypeExtension content_presentation_type_extension = 50006;
+}
+
+message ContentPresentationTypeExtension {
+  voplica.types.base.FileType derived_file_type = 1;
+}
+
+// Lives in voplica.types.base so that the content and file packages do not import each other; the values are unchanged.
+// This type is stored on the backend side after conversion to better understand how a specific content is presented
+// UI can query specific presentation type for example or show some image / video variants differently depending on
+// the presentation type
+enum ContentPresentationType {
+  /**
+   * Default presentation. I.e.: depending on asset type either IMAGE, VIDEO or AUDIO
+   */
+  CONTENT_PRESENTATION_TYPE_UNSPECIFIED = 0 [(content_presentation_type_extension) = { derived_file_type: FILE_TYPE_UNSPECIFIED }];
+  /**
+   * Default image presentation type
+   */
+  IMAGE_DEFAULT = 1000 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+  /**
+   * Default image cropped to get center in a square image
+   */
+  IMAGE_DEFAULT_CENTER_SQUARE = 1001 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+  /**
+   * Square avatar image cropped to get center by specified WIDTH, HEIGHT
+   */
+  IMAGE_AVATAR = 1002 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+  /**
+   * Banner image cropped to get center by specified WIDTH, HEIGHT
+   */
+  IMAGE_BANNER = 1003 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+  /**
+   * Banner image cropped to get center by specified WIDTH, HEIGHT
+   */
+  IMAGE_VERTICAL = 1004 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+  /**
+   * Image cover for the video
+   */
+  IMAGE_VIDEO_COVER = 1005 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+  /**
+   * Image thumbnail for the video
+   */
+  IMAGE_VIDEO_DEFAULT_THUMBNAIL = 1006 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+  /**
+   * Regular prepared dataset image (i.e. usually final image for training).
+   */
+  IMAGE_DATASET_REGULAR = 1007 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+  /**
+   * Prepared dataset image mask (i.e. an image showing selection of the main object).
+   */
+  IMAGE_DATASET_MASK = 1008 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+  /**
+   * Prepared dataset image with an alpha channel that contains only the main object.
+   */
+  IMAGE_DATASET_ALPHA = 1009 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+  /**
+  * Default video stream
+  */
+  VIDEO_DEFAULT = 2000 [(content_presentation_type_extension) = { derived_file_type: VIDEO_FILE }];
+  /**
+   * Video stream preview for the video
+   */
+  VIDEO_PREVIEW = 2001 [(content_presentation_type_extension) = { derived_file_type: VIDEO_FILE }];
+  /**
+  * Default audio stream
+  */
+  AUDIO_DEFAULT = 3000 [(content_presentation_type_extension) = { derived_file_type: AUDIO_FILE }];
+  /**
+   * Extracted audio stream (can be used for video assets)
+   */
+  AUDIO_EXTERNAL = 3001 [(content_presentation_type_extension) = { derived_file_type: AUDIO_FILE }];
+  /**
+  * Default text
+  */
+  TEXT_DEFAULT = 4000 [(content_presentation_type_extension) = { derived_file_type: TEXT_FILE }];
+  /**
+  * Default object
+  */
+  OBJECT_DEFAULT = 5000 [(content_presentation_type_extension) = { derived_file_type: GENERAL_FILE }];
+  /**
+  * Default generative model files
+  */
+  MODEL_GEN_DEFAULT = 6000 [(content_presentation_type_extension) = { derived_file_type: MODEL_GEN_FILE }];
+  /**
+  * Default vector graphic (original format preserved)
+  */
+  VECTOR_GRAPHIC_DEFAULT = 7000 [(content_presentation_type_extension) = { derived_file_type: VECTOR_GRAPHIC_FILE }];
+  /**
+  * Rasterized preview image derived from a vector graphic source
+  */
+  VECTOR_GRAPHIC_RASTERIZED_PREVIEW = 7001 [(content_presentation_type_extension) = { derived_file_type: IMAGE_FILE }];
+}

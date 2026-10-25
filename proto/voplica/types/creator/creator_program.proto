@@ -1,0 +1,183 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.creator;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.creator";
+option go_package = "voplica.com/types/creator";
+option csharp_namespace = "Voplica.Types.Creator";
+import "voplica/types/vault/vault.proto";
+
+// The application ladder, mirroring the affiliate payout ACCEPT ladder: a state an ADMIN moved is
+// never moved back by the applicant.
+enum CreatorProgramStatus {
+  // No application row exists. The answer for every user who has never applied.
+  CREATOR_PROGRAM_STATUS_UNSPECIFIED = 0;
+  CREATOR_PROGRAM_DRAFT = 1;
+  // In the admin queue. The applicant may withdraw (back to DRAFT) until an admin claims it.
+  CREATOR_PROGRAM_SUBMITTED = 2;
+  // An admin claimed it (the ACCEPT rung): the applicant can no longer withdraw or edit the links,
+  // exactly as an ACCEPTED payout locks the affiliate's cancel.
+  CREATOR_PROGRAM_UNDER_REVIEW = 3;
+  // Approved. The ONLY state in which revenue share may be enabled or a creator allowance applies.
+  CREATOR_PROGRAM_APPROVED = 4;
+  // Rejected with a reason. Re-appliable (the reason is shown to the applicant).
+  CREATOR_PROGRAM_REJECTED = 5;
+  CREATOR_PROGRAM_REVOKED = 6;
+}
+
+// How the platform came to hold this link.
+enum CreatorLinkMethod {
+  CREATOR_LINK_METHOD_UNSPECIFIED = 0;
+  CREATOR_LINK_OAUTH = 1;
+  CREATOR_LINK_API_KEY = 2;
+}
+
+// WHICH of the three checks tied a model to a linked profile. Strongest first; see the RPC.
+enum CreatorProvenanceMethod {
+  CREATOR_PROVENANCE_METHOD_UNSPECIFIED = 0;
+  // The variant was IMPORTED and its source ref sits under a namespace of the linked profile.
+  // Server-derived from the import row - the caller cannot influence it.
+  CREATOR_PROVENANCE_IMPORT_SOURCE = 1;
+  // An import item's announced SHA-256 matches a file hash in the pulled snapshot.
+  CREATOR_PROVENANCE_FILE_HASH = 2;
+  // The owner declared an external ref and it was FOUND in the pulled snapshot. The weakest of the
+  // three - it proves the CLAIM matches the profile, not that the bytes do - and it is still
+  // accepted because a creator may legitimately upload their own weights from disk. The cross-owner
+  // digest check (REVENUE_SHARE_DUPLICATE_CONTENT) is what stops it being a loophole.
+  CREATOR_PROVENANCE_DECLARED_REF = 3;
+}
+
+// One linked provider profile, as the platform pulled it.
+message CreatorProviderLink {
+  voplica.types.vault.ThirdPartyProvider provider = 1;
+  // The provider's own stable id for the profile (Civitai username, HuggingFace user/org name).
+  string external_profile_id = 2;
+  string external_display_name = 3;
+  string profile_url = 4;
+  repeated string namespaces = 5;
+  // How many models the last pull saw. The list itself is not returned here - it can be thousands
+  // of rows and no caller of this message needs it.
+  uint32 snapshot_model_count = 6;
+  uint64 snapshot_taken_at = 7; // epoch millis
+  CreatorLinkMethod link_method = 8;
+  bool token_retained = 9;
+  uint64 linked_at = 10; // epoch millis
+  optional CreatorProfileStats stats = 11;
+  // The PROVIDER's own verification/badge status, where its public profile exposes one: Hugging
+  // Face PRO (`hf:pro`) and enterprise-organisation membership (`hf:enterprise-org:<name>`);
+  // Civitai exposes none through its public API today, so a Civitai link reads false/empty and
+  // that is not a finding about the creator. `provider_verified` = any badge that the platform
+  // treats as verification (today: hf:pro or an enterprise org).
+  bool provider_verified = 12;
+  repeated string provider_badges = 13;
+  optional CreatorLinkMethod identity_verified_by = 14;
+  optional uint64 identity_verified_at = 15;
+  string external_account_id = 16;
+  optional uint64 identity_check_failed_at = 17;
+  optional uint64 provider_badges_fetched_at = 18;
+}
+
+// The popularity snapshot of one linked profile, summed over the public listing the platform pulled
+// (Hugging Face `likes`/`downloads` per model; Civitai `thumbsUpCount`/`downloadCount`/
+// `favoriteCount`/`ratingCount`/`rating` per model). Zero means "the provider announces none".
+message CreatorProfileStats {
+  uint64 downloads_total = 1;
+  uint64 likes_total = 2;
+  uint64 favourites_total = 3;
+  uint64 max_model_likes = 4;
+  // Hugging Face `numFollowers` from the public user overview; 0 for Civitai.
+  uint64 followers = 5;
+  uint64 fetched_at = 6; // epoch millis
+  uint64 ratings_total = 7;
+  float rating_average = 8;
+}
+
+// One row of a pulled profile snapshot. Stored per link; returned only to the owner and to admins.
+message CreatorProfileModelRef {
+  voplica.types.vault.ThirdPartyProvider provider = 1;
+  // The provider's canonical reference: "author/repo" for Hugging Face, "civitai:<modelId>" for
+  // Civitai. One spelling, so a declared ref can be compared without a per-provider parser.
+  string external_ref = 2;
+  string display_name = 3;
+  uint64 external_updated_at = 4; // epoch millis, 0 when the provider announces none
+  // Lowercase hex SHA-256 of the model's weight files, as the PROVIDER announces them. Empty when
+  // it announces none - which is most of Hugging Face, and is why FILE_HASH is not the only method.
+  repeated string file_sha256 = 5;
+  uint64 downloads = 6;
+  uint64 likes = 7; // Hugging Face `likes`; Civitai `thumbsUpCount`
+  uint64 favourites = 8; // Civitai `favoriteCount`; 0 on Hugging Face
+  uint32 rating_count = 9; // Civitai `ratingCount`; 0 on Hugging Face
+  float rating = 10; // Civitai `rating` (0-5); 0 on Hugging Face
+}
+
+// Tri-state "does this applicant already host models on Voplica" (public, published, verified variants). UNKNOWN
+// = not asked or unreachable; a client renders it exactly like NO. The zero value is spelled UNKNOWN on purpose:
+// it is an answer ("asked, could not tell"), not an unset field.
+// buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
+enum CreatorHostsModels {
+  CREATOR_HOSTS_MODELS_UNKNOWN = 0;
+  CREATOR_HOSTS_MODELS_NO = 1;
+  CREATOR_HOSTS_MODELS_YES = 2;
+}
+
+// The applicant's own record.
+message CreatorProgramApplication {
+  string user_id = 1;
+  CreatorProgramStatus status = 2;
+  uint64 applied_at = 3; // epoch millis
+  optional uint64 decided_at = 4;
+  optional string decision_reason = 5; // shown to the applicant on REJECTED / REVOKED
+  repeated CreatorProviderLink links = 6;
+  optional string applicant_note = 7;
+  uint32 terms_version_accepted = 8;
+  uint64 updated_at = 9;
+  reserved 10;
+  reserved 11;
+  bool submitted_without_link = 12;
+  // `links.size()` on the same read - repeated so a client has one place to read the facts.
+  uint32 provider_link_count = 13;
+  // Probed on the applicant's own DRAFT read and on the admin DETAIL; UNKNOWN everywhere else
+  // (the mutator echoes, the admin LIST) by design - re-read the detail after a decision.
+  CreatorHostsModels hosts_models = 14;
+}
+
+// The answer to "may this model earn?", recorded on the variant so the owner and an admin both see
+// WHICH check passed and when.
+message CreatorModelProvenance {
+  bool proven = 1;
+  voplica.types.vault.ThirdPartyProvider provider = 2;
+  string external_ref = 3;
+  CreatorProvenanceMethod method = 4;
+  uint64 verified_at = 5; // epoch millis
+  // Present when `proven` is false: which check failed, in words the owner can act on.
+  optional string refusal_reason = 6;
+}
+
+enum CreatorAllowanceRequestStatus {
+  CREATOR_ALLOWANCE_REQUEST_STATUS_UNSPECIFIED = 0;
+  CREATOR_ALLOWANCE_REQUEST_PENDING = 1;
+  CREATOR_ALLOWANCE_REQUEST_GRANTED = 2;
+  CREATOR_ALLOWANCE_REQUEST_REFUSED = 3;
+}
+
+message CreatorAllowanceRequest {
+  string id = 1;
+  string user_id = 2;
+  // What the creator is asking for, in bytes. Advisory: the admin sets the number that lands.
+  uint64 requested_bytes = 3;
+  string reason = 4;
+  CreatorAllowanceRequestStatus status = 5;
+  uint64 created_at = 6;
+  optional uint64 decided_at = 7;
+  optional string decision_note = 8;
+  // The allowance actually set when GRANTED, in bytes (-1 is never used here: unlimited public
+  // hosting is not a thing an admin grants through this queue).
+  optional uint64 granted_bytes = 9;
+  reserved 10;
+  reserved 11;
+}

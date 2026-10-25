@@ -1,0 +1,7 @@
+# The tools .github/workflows/python.yml installs to generate and build the package, pinned. grpcio-tools is the
+# generator of the platform's own Python package (its protoc writes "Protobuf Python Version: 6.31.1" into every
+# *_pb2.py and GRPC_GENERATED_VERSION = '1.80.0' into every *_pb2_grpc.py); setuptools is the build backend
+# pyproject.toml pins; build runs it.
+grpcio-tools==1.80.0
+setuptools==83.0.0
+build==1.6.1

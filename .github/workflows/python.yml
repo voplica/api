@@ -1,0 +1,171 @@
+# The Python client voplica-api: on every version tag (one per sync, `v<VERSION>`) generated from proto/ by the
+# pinned grpcio-tools, built (the sdist, and the wheel from it), tested as an installed wheel (Python 3.12 and 3.14
+# with the newest runtime its range admits, Python 3.10 with the oldest), published to PyPI by Trusted Publishing
+# (OIDC: no token, no secret) and installed back from PyPI. A manual run generates, builds and tests only, on any ref.
+# PyPI trusts this workflow as: project voplica-api, owner voplica, repository api, workflow python.yml, environment
+# pypi (an environment of this repository).
+name: Python
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Generate, build and test
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: clients/python
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Take the version from VERSION, and refuse a tag that is not v$(cat VERSION)
+        working-directory: .
+        run: |
+          version="$(cat VERSION)"
+          if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::VERSION is \"$version\", not X.Y.Z: nothing is published"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::the tag $GITHUB_REF_NAME is not v$version (VERSION): nothing is published"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install the pinned generator and build tools
+        run: |
+          python -m venv "$RUNNER_TEMP/tools"
+          "$RUNNER_TEMP/tools/bin/python" -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Generate voplica/ from proto/
+        run: |
+          "$RUNNER_TEMP/tools/bin/python" -I scripts/generate.py
+      - name: Build the sdist, and the wheel from it
+        run: |
+          "$RUNNER_TEMP/tools/bin/python" -m build --no-isolation --outdir dist .
+          ls -l dist
+          test -f "dist/voplica_api-$VERSION.tar.gz"
+          test -f "dist/voplica_api-$VERSION-py3-none-any.whl"
+          test "$(ls dist | wc -l)" = 2
+      - name: Test the wheel, installed into a fresh venv with the newest runtime its range admits
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -m venv venv-test
+          venv-test/bin/python -m pip install --disable-pip-version-check --only-binary :all: \
+            "$GITHUB_WORKSPACE/clients/python/dist/voplica_api-$VERSION-py3-none-any.whl"
+          venv-test/bin/python -m pip list --disable-pip-version-check
+          tests="$GITHUB_WORKSPACE/clients/python/tests"
+          VOPLICA_API_VERSION="$VERSION" venv-test/bin/python -I -m unittest discover -v -s "$tests" -t "$tests"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: voplica-api-python
+          path: clients/python/dist/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  test:
+    name: Test on Python ${{ matrix.python }} with the ${{ matrix.runtime }} runtime
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - python: "3.10"
+            runtime: oldest
+            requirements: clients/python/requirements-floor.txt
+          - python: "3.14"
+            runtime: newest
+            requirements: ""
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: voplica-api-python
+          path: dist
+      - name: Install the wheel into a fresh venv and run the tests
+        working-directory: ${{ runner.temp }}
+        env:
+          REQUIREMENTS: ${{ matrix.requirements }}
+        run: |
+          version="$(cat "$GITHUB_WORKSPACE/VERSION")"
+          runtime=()
+          if [ -n "$REQUIREMENTS" ]; then
+            runtime=(-r "$GITHUB_WORKSPACE/$REQUIREMENTS")
+          fi
+          python -m venv venv-test
+          venv-test/bin/python -m pip install --disable-pip-version-check --only-binary :all: "${runtime[@]}" \
+            "$GITHUB_WORKSPACE/dist/voplica_api-$version-py3-none-any.whl"
+          venv-test/bin/python -m pip list --disable-pip-version-check
+          tests="$GITHUB_WORKSPACE/clients/python/tests"
+          VOPLICA_API_VERSION="$version" venv-test/bin/python -I -m unittest discover -v -s "$tests" -t "$tests"
+
+  publish:
+    name: Publish to PyPI
+    needs: [build, test]
+    # A tag push only: a manual run builds and tests, even when it is started on a tag.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      id-token: write # Trusted Publishing: PyPI exchanges this job's OIDC identity for a short-lived upload token
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: voplica-api-python
+          path: dist
+      - name: Publish voplica-api (a version already on PyPI is skipped)
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          skip-existing: true
+          print-hash: true
+
+  smoke:
+    name: Install it back from PyPI
+    needs: publish
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install the published version into an empty venv and import it
+        run: |
+          version="$(cat VERSION)"
+          smoke="$RUNNER_TEMP/smoke"
+          mkdir "$smoke"
+          cp clients/python/tests/smoke.py "$smoke/"
+          python -m venv "$smoke/venv"
+          py="$smoke/venv/bin/python"
+          # PyPI serves a version moments after its upload, but its CDN can lag: retry for up to ten minutes.
+          for attempt in $(seq 1 20); do
+            if "$py" -m pip install --no-cache-dir --only-binary voplica-api "voplica-api==$version"; then
+              break
+            fi
+            if [ "$attempt" = 20 ]; then
+              echo "::error::voplica-api==$version cannot be installed from PyPI"
+              exit 1
+            fi
+            sleep 30
+          done
+          "$py" -I "$smoke/smoke.py" "$version" "$GITHUB_WORKSPACE/proto"

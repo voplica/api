@@ -1,0 +1,71 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.character;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.character";
+option go_package = "voplica.com/types/character";
+option csharp_namespace = "Voplica.Types.Character";
+import "voplica/types/file/files.proto";
+import "voplica/types/base/mpa_rating.proto";
+
+enum CharacterSheetType {
+  CHARACTER_SHEET_TYPE_UNSPECIFIED = 0;
+  // All standardized views, including BOTH side views (the original 5-panel layout).
+  CHARACTER_SHEET_TYPE_DEFAULT = 1;
+  // face + front + ONE side (the LEFT/BODY_LEFT view) + back = 4 panels. The layout the LTX
+  // Best-Face-ID video path consumes; the right side view is deliberately excluded.
+  CHARACTER_SHEET_TYPE_BEST_FACE_ID = 2;
+  // An N-image combined sheet built from user-supplied pictures (flexible grid, NOT the
+  // standardized views). Produced by the wizard's multi-upload anchor path.
+  CHARACTER_SHEET_TYPE_CUSTOM_REFERENCE = 3;
+}
+
+enum CharacterLookAssetType {
+  CHARACTER_LOOK_ASSET_TYPE_UNSPECIFIED = 0;
+  FACE_CLOSEUP = 1;
+  BODY_FRONT = 2;
+  BODY_LEFT = 3;
+  BODY_RIGHT = 4;
+  BODY_BACK = 5;
+  HALF_BODY = 6;
+  SHEET_BEST_FACE_ID = 20;
+  SHEET_DEFAULT = 21; // all standardized views incl. BOTH sides (CHARACTER_SHEET_TYPE_DEFAULT)
+  SHEET_CUSTOM_REFERENCE = 22; // N-image user-upload grid (CHARACTER_SHEET_TYPE_CUSTOM_REFERENCE)
+}
+
+message CharacterLookAsset {
+  string asset_id = 1;
+  CharacterLookAssetType asset_type = 2;
+  uint64 added_at = 3; // epoch millis (platform convention)
+  // Resolved only when the list request carries an asset retriever:
+  optional voplica.types.file.AssetFileVariantGroups asset_groups = 4;
+}
+
+// A named, persisted appearance of a character: an optional look prompt, an MPA rating and a set of
+// typed image assets. Looks generalize the ephemeral per-run look-sheet machinery into an entity.
+message CharacterLook {
+  string id = 1;
+  string character_id = 2;
+  string name = 3;
+  optional string look_prompt = 4; // overrides CharacterMetadata.look_prompt
+  voplica.types.base.MPARating mpa_rating = 5; // same type Datasets/Content use
+  uint64 created_at = 6;
+  // Layout of this look's composed sheet. ABSENT / UNSPECIFIED (0) MEANS DEFAULT - see
+  // `CharacterSheetType`: pre-existing looks are stored with a NULL column and are DEFAULT sheets.
+  CharacterSheetType sheet_type = 7;
+  optional voplica.types.file.FileReference anchor = 8;
+  // Resolved only when requested (previews retriever):
+  optional voplica.types.file.AssetFileVariantGroups default_preview = 10;
+}
+
+message CharacterLookShortPreview { // mirrors ModelVariantShortPreview
+  string look_id = 1;
+  string name = 2;
+  uint64 created_at = 3;
+  optional voplica.types.file.AssetFileVariantGroups default_preview = 4;
+}

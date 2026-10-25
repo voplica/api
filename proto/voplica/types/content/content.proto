@@ -1,0 +1,211 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.content;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.content";
+option go_package = "voplica.com/types/content";
+option csharp_namespace = "Voplica.Types.Content";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/base/content_moderation_status.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/file/file_mpa_analysis.proto";
+import "voplica/types/base/publish_status.proto";
+import "voplica/types/content/content_origin_type.proto";
+import "voplica/types/content/provenance_display_level.proto";
+
+// A single piece of content (image, video, audio, 3D model, etc.) that can
+// be shared on the social feed.
+//
+// Content can be created in two ways:
+// 1. From a workflow execution — automatically registered when a step with
+//    content_registration config completes, or manually created from step
+//    outputs via CreateContent.
+// 2. From a direct upload — user uploads content that was created externally
+//    (e.g., with Midjourney, ComfyUI, or other tools).
+//
+// Each content item owns its files independently (via its own Asset). The provenance
+// data is snapshotted at creation time so it persists even if the workflow execution
+// data is later cleaned up.
+message Content {
+  // Unique ID of the generated content
+  string id = 1;
+  // Owner of the content (the user who created or uploaded it)
+  string owner_id = 2;
+  // Publication status
+  voplica.types.base.PublishStatus status = 3;
+  // Visibility (PUBLIC, PRIVATE).
+  // PUBLIC content is visible to anyone (subject to MPA rating filters).
+  // PRIVATE content is visible only to the owner.
+  voplica.types.base.VisibilityType visibility = 4;
+  // Content rating using the MPA film rating system.
+  // Used for content filtering in the social feed based on user preferences.
+  voplica.types.base.MPARating mpa_rating = 5;
+  // The actual content files (image variants, video streams, etc.)
+  // Note: file_variant_groups are returned only if explicitly requested via file retriever options.
+  voplica.types.file.AssetFileVariantGroups asset = 6;
+  // When the content record was created (seconds from UTC epoch)
+  uint64 created_at = 7;
+  // How the content was originally created (WORKFLOW or UPLOAD).
+  // Denormalized from provenance.origin for efficient filtering without inspecting the oneof.
+  ContentOriginType origin_type = 8;
+  repeated voplica.types.file.FileInfo source_files = 9;
+  bool searchable = 10;
+  // The rating the platform's MPA analysis determined. Never user-writable.
+  // UNSPECIFIED means analysis has not (yet) produced a rating for this content.
+  // Invariant: when set, `mpa_rating >= analyzed_mpa_rating` (never-lower rule).
+  voplica.types.base.MPARating analyzed_mpa_rating = 11;
+  // True iff `mpa_rating` was set by a platform ESTIMATE - the quick estimate at publication or through
+  // ContentService.EstimateMpaRating, an asset-preparation detector, or the un-analysable placeholder - not by the
+  // user and not by analysis. Cleared when analysis applies or when the user (or an admin) sets a rating.
+  bool mpa_rating_estimated = 12;
+  // Moderation state. FLAGGED / REJECTED block (re)publishing.
+  voplica.types.base.ContentModerationStatus moderation_status = 13;
+  reserved 14;
+  bool publication_pending = 15;
+  bool publication_refused = 16;
+  bool uploaded_song_lineage = 17;
+  // Engagement metrics (read-only, updated by the platform). Renamed from views_count/checks_count -- see the
+  // checks->views/views->engagement terminology rename.
+  uint64 likes_count = 20;
+  uint64 engagement_count = 21;
+  uint64 views_count = 22;
+}
+
+message ContentMetadata {
+  // How this content was generated (workflow origin or upload origin, models, prompt, etc.)
+  // Snapshotted at creation time for permanence and search.
+  // Returned if the user is owner or `ProvenanceDisplayLevel` is either `FULL` or `BASIC`.
+  optional ContentProvenance provenance = 1;
+  // User-editable metadata (can be set at publish time or updated later)
+  optional string description = 2;
+  // Controls how much provenance metadata is visible to non-owners.
+  // The owner always sees full provenance regardless of this setting.
+  ProvenanceDisplayLevel provenance_display_level = 3;
+  // User-editable tags (can be set at publish time or updated later)
+  repeated string tags = 4;
+  // Analysis snapshot of the source file this content was analyzed from, taken at apply
+  // time (provenance for admin review + reason surfacing). Owner/admin visibility only -
+  // same redaction rules as the asset-preparation metadata.
+  optional voplica.types.file.FileMpaAnalysis mpa_analysis = 5;
+  // Status of the MPA verification job for this content (PENDING/RUNNING/COMPLETED/FAILED).
+  // Owner/admin visibility only.
+  voplica.types.base.JobStatus mpa_check_job_status = 6;
+  reserved 7;
+}
+
+// Provenance data describing how a piece of content was generated.
+//
+// This data is snapshotted at content creation time for two purposes:
+// 1. Display: show "how this was made" (generation card) on the content detail page
+// 2. Search: enable filtering by model, character, prompt, workflow, etc.
+//
+// The provenance is split into:
+// - origin: where the content came from (workflow execution or user upload)
+// - params: generation parameters (models, prompt, seed — shared across both origins)
+//
+// For workflow content, the full step input/output parameters can be fetched via the
+// Workflow Execution API (GetWorkflowStepOutputs) as long as the execution data hasn't
+// been cleaned up.
+message ContentProvenance {
+  // Where the content originated from
+  oneof origin {
+    // Content produced by a workflow execution
+    WorkflowOrigin workflow = 1;
+    // Content uploaded directly by the user
+    UploadOrigin upload = 2;
+  }
+  // Generation parameters (models, prompt, characters, seed).
+  // For workflow content, these are resolved from the step's
+  // content_provenance_generation_params (defined on WorkflowStep or WorkflowVariant).
+  // For uploaded content, these are optionally provided by the user.
+  // Returned only if user has access (either owner or FULL Provenance Display Level is set).
+  optional GenerationParams params = 3;
+}
+
+// Workflow execution lineage for content produced by the Workflow Engine.
+//
+// Contains all the information needed to trace this content back to the specific
+// workflow execution, step, and iteration that produced it.
+//
+// The source_step_id and source_iteration_number reference the step that
+// actually produced the content (e.g., BaseImageGeneration, ImageRefine).
+// Content is created via the step's content_registration configuration in
+// WorkflowStepExecConfig, not via a separate publishing step.
+message WorkflowOrigin {
+  // Workflow execution that produced this content.
+  // Execution id is returned to owner only because only owner of the execution can view the execution itself.
+  optional string workflow_execution_id = 1;
+  // Workflow that the variant belongs to
+  string workflow_id = 2;
+  // Workflow variant that was executed
+  string workflow_variant_id = 3;
+  // Step within the workflow variant that produced this content (the generation step,
+  // e.g., BaseImageGeneration, ImageRefine). This references the step whose output
+  // files are used as the content's asset.
+  uint32 source_step_id = 4;
+  // Iteration number of the source step that produced this content.
+  uint32 source_iteration_number = 5;
+}
+
+// Origin data for content uploaded directly by the user (not from a workflow).
+message UploadOrigin {
+}
+
+// Generation parameters shared across all content origins.
+//
+// For workflow content, these are resolved from the step's
+// content_provenance_generation_params (defined on WorkflowStep or as a default on
+// WorkflowVariant). The workflow author wires these fields from step inputs/outputs
+// using the standard data-linking system (WorkflowResolvableParamValue).
+// For uploaded content, the user can optionally provide these manually.
+//
+// All fields are optional — provenance captures what the author/user provides.
+// Unknown or unavailable fields are left empty.
+message GenerationParams {
+  // Base model variant IDs used for generation
+  repeated string base_model_ids = 1;
+  // LoRA model variant IDs applied during generation
+  repeated string lora_model_ids = 2;
+  // Character IDs depicted in or used for the content
+  repeated string character_ids = 3;
+  // The prompt used for generation
+  optional string prompt = 4;
+  // The negative prompt used for generation
+  optional string negative_prompt = 5;
+  // The seed used for generation. String to support arbitrary precision.
+  optional string seed = 6;
+  // This helps enriching `generation_params` when some values are not provided.
+  // In that case, it will search for those values in the origin files (if specified) and populate
+  // unspecified params from the Content of that file - if any exists.
+  // It also helps tracking origin content.
+  // It will try to find Content for origin files. If a single Content is found it will take all necessary
+  // missing metadata from that Content.
+  // If multiple Content files are found it will take all information from all of them, but for `prompt`, `negative_prompt`,
+  // it will prefer taking single value from the first non-blank prompt.
+  // `seed` is never taken from original content.
+  repeated string origin_file_ids = 7;
+  repeated string look_ids = 8;
+}
+
+message ContentAssetPreparationMetadata {
+  voplica.types.base.JobStatus status = 1;
+  // Optional error message
+  optional string message = 2;
+  // Id of the workflow that is preparing the Asset
+  optional string preparation_workflow_id = 3;
+  bool auto_publish_enabled = 4;
+  // MPA rating for auto-created content.
+  // If the content is detected to be produced with higher-level mpa_rating this content will not be auto-published.
+  // If not set - allow any mpa_rating publishing.
+  optional voplica.types.base.MPARating expected_mpa_rating = 5;
+  // Auto-detected mpa_rating.
+  // If provided - then user's provided `mpa_rating` must not be lower than this level.
+  optional voplica.types.base.MPARating auto_detected_mpa_rating = 6;
+}

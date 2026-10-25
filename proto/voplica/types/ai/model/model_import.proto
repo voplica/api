@@ -1,0 +1,277 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.model;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.model";
+option go_package = "voplica.com/types/ai/model";
+option csharp_namespace = "Voplica.Types.Ai.Model";
+import "voplica/types/vault/vault.proto";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/likeness_category.proto";
+import "voplica/types/ai/common/model_family_type.proto";
+import "voplica/types/ai/common/model_type.proto";
+import "voplica/types/ai/common/subject_category.proto";
+import "voplica/types/ai/common/controlnet_type.proto";
+import "voplica/types/ai/common/model_file_structure.proto";
+import "voplica/types/ai/common/d_type.proto";
+import "voplica/types/ai/common/quantization_type.proto";
+import "voplica/types/ai/common/model_file_role.proto";
+import "voplica/types/subscription/studio_subscription_type.proto";
+
+// What an import job creates.
+enum ModelImportKind {
+  MODEL_IMPORT_KIND_UNSPECIFIED = 0;
+  // A new Model with one variant per selected external version.
+  IMPORT_MODEL = 1;
+  // One new variant (one external version) into an existing Model.
+  IMPORT_MODEL_VARIANT = 2;
+  // Model files only, into an existing variant's asset.
+  IMPORT_VARIANT_FILES = 3;
+}
+
+enum ModelImportItemKind {
+  MODEL_IMPORT_ITEM_KIND_UNSPECIFIED = 0;
+  IMPORT_ITEM_MODEL_FILE = 1;
+  IMPORT_ITEM_PREVIEW = 2;
+}
+
+// Provider-side file roles (Civitai `files[].type`; HuggingFace paths are always EXTERNAL_FILE_MODEL).
+enum ExternalFileKind {
+  EXTERNAL_FILE_KIND_UNSPECIFIED = 0;
+  EXTERNAL_FILE_MODEL = 1;
+  EXTERNAL_FILE_DIFFUSION_MODEL = 2;
+  EXTERNAL_FILE_VAE = 3;
+  EXTERNAL_FILE_TEXT_ENCODER = 4;
+  EXTERNAL_FILE_TRAINING_DATA = 5;
+  EXTERNAL_FILE_OTHER = 6;
+  // Provider type "Config" - workflow/config JSON or YAML. Never imported; the value exists so
+  // a refusal can name what the file was.
+  EXTERNAL_FILE_CONFIG = 7;
+  // Provider type "Upscaler" (e.g. the LTX spatial upscalers).
+  EXTERNAL_FILE_UPSCALER = 8;
+}
+
+enum ExternalFileFormat {
+  EXTERNAL_FILE_FORMAT_UNSPECIFIED = 0;
+  EXTERNAL_FORMAT_SAFETENSORS = 1;
+  EXTERNAL_FORMAT_ZIP = 2;
+  EXTERNAL_FORMAT_GGUF = 3;
+  EXTERNAL_FORMAT_OTHER = 4;
+}
+
+enum ExternalTokenStatus {
+  EXTERNAL_TOKEN_STATUS_UNSPECIFIED = 0;
+  TOKEN_OK = 1;
+  // The caller has no stored token for the provider.
+  TOKEN_MISSING = 2;
+  // The provider rejected the stored token (revoked / expired).
+  TOKEN_INVALID = 3;
+}
+
+enum ExternalPreviewKind {
+  EXTERNAL_PREVIEW_KIND_UNSPECIFIED = 0;
+  PREVIEW_IMAGE = 1;
+  PREVIEW_VIDEO = 2;
+}
+
+message ExternalFileSummary {
+  string external_file_id = 1;
+  // File name (Civitai) or repository path (HuggingFace).
+  string name = 2;
+  ExternalFileKind kind = 3;
+  ExternalFileFormat format = 4;
+  int64 size_bytes = 5;
+  // Hex SHA-256 when the provider reports one.
+  string sha256 = 6;
+  // Raw precision label from the provider ("fp16", "bf16", "fp8", "nf4", …); empty when unknown.
+  string precision = 7;
+  bool pruned = 8;
+  bool primary = 9;
+  bool supported = 10;
+  optional string unsupported_reason = 11;
+  // Declared metadata the import sends with the MODEL_GEN_ASSET_ATTACH flow.
+  voplica.types.ai.common.ModelFileStructure declared_structure = 12;
+  voplica.types.ai.common.DType declared_dtype = 13;
+  voplica.types.ai.common.QuantizationType declared_quantization = 14;
+  // Provider scan verdicts when available (Civitai: "Success", "Danger", "Pending", …).
+  optional string virus_scan_result = 15;
+  optional string pickle_scan_result = 16;
+  // 17-19 reserved (never reuse).
+  reserved 17 to 19;
+  // The importer's classification of this file (provider type, then filename, then HF folder).
+  voplica.types.ai.common.ModelFileRole role = 20;
+  // Files that are ALTERNATIVES of one another (same weights, different precision/container)
+  // share a key: "weights", "vae", "text_encoder" or "text_encoder_2" (the diffusers slot).
+  // Stamped only when a version holds two or more files of that group; empty for singletons.
+  // At most one SUPPORTED file per group carries recommended = true; a supported singleton is
+  // recommended with an empty group.
+  string alternative_group = 21;
+  // The default pick inside its group (see alternative_group).
+  bool recommended = 22;
+  // Human text explaining the role and the ranking, e.g. "same weights in lower precision - the
+  // platform serves an fp8 tier automatically", "Flux VAE", "sharded - not importable".
+  string role_note = 23;
+}
+
+message ExternalPreviewSummary {
+  // Position in the provider's preview list; the import selects the first N.
+  uint32 index = 1;
+  ExternalPreviewKind kind = 2;
+  uint32 width = 3;
+  uint32 height = 4;
+  uint32 nsfw_level = 5;
+  // The provider's public preview URL (no secret involved) so the studio can render it.
+  string preview_url = 6;
+}
+
+message ExternalModelVersionSummary {
+  string external_version_id = 1;
+  string name = 2;
+  // The provider's raw base-model label ("Flux.2 Klein 9B", "SDXL 1.0", …).
+  string base_model = 3;
+  optional voplica.types.ai.common.ModelFamily mapped_model_family = 4;
+  // False when no family mapping exists or the mapped family is not accepted for uploads.
+  bool family_supported = 5;
+  optional string mapping_note = 6;
+  repeated string trained_words = 7;
+  uint32 nsfw_level = 8;
+  repeated ExternalFileSummary files = 9;
+  repeated ExternalPreviewSummary previews = 10;
+  uint64 published_at = 11;
+  bool inpainting = 12;
+}
+
+message ExternalModelSummary {
+  voplica.types.vault.ThirdPartyProvider provider = 1;
+  string api_host = 2;
+  string external_model_id = 3;
+  string name = 4;
+  // Plain text (provider HTML stripped).
+  string description = 5;
+  voplica.types.ai.common.ModelType model_type = 6;
+  bool type_supported = 7;
+  // The provider's raw type label ("Checkpoint", "LORA", "TextualInversion", …).
+  string external_type = 8;
+  bool nsfw = 9;
+  bool poi = 10;
+  bool minor = 11;
+  string creator_name = 12;
+  bool owned_by_token_holder = 13;
+  bool import_allowed = 14;
+  optional string import_blocked_reason = 15;
+  repeated string allow_commercial_use = 16;
+  bool allow_derivatives = 17;
+  repeated ExternalModelVersionSummary versions = 18;
+  // Set when the source URI named one version; the studio pre-selects it.
+  optional string requested_version_id = 19;
+  // The provider's own tags, in the provider's order (Civitai: `model.tags`). Raw and unfiltered -
+  // the studio shows them, and `suggested_category` is what we made of them.
+  repeated string tags = 20;
+  optional voplica.types.ai.common.SubjectCategory suggested_category = 21;
+}
+
+message ExternalRepoSummary {
+  voplica.types.vault.ThirdPartyProvider provider = 1;
+  string repo_id = 2;
+  string revision = 3;
+  string author = 4;
+  bool owned_by_token_holder = 5;
+  bool import_allowed = 6;
+  optional string import_blocked_reason = 7;
+  bool gated = 8;
+  bool private_repo = 9;
+  repeated ExternalFileSummary files = 10;
+  // Set when the source URI named one file; the studio pre-selects it.
+  optional string requested_path = 11;
+}
+
+message ImportQuotaEstimate {
+  int64 free_bytes = 1;
+  int64 selected_bytes_estimate = 2;
+  bool sufficient = 3;
+}
+
+message ImportVersionSelection {
+  string external_version_id = 1;
+  // Overrides / supplies the family for this version (required when the summary says
+  // family_supported = false).
+  optional voplica.types.ai.common.ModelFamily model_family = 2;
+  repeated string external_file_ids = 3;
+  // 0 = the platform's default.
+  uint32 max_previews = 4;
+  // Donor variant for transformer-only weights (text encoders / VAE come from it); optional, same
+  // semantics as CreateModelVariantRequest.based_on_model_variant_id.
+  optional string based_on_model_variant_id = 5;
+}
+
+// The CreateModelRequest fields the user must still supply (everything else comes from the provider).
+message ImportModelFields {
+  voplica.types.base.VisibilityType visibility = 1;
+  bool revenue_sharing_preferred = 2;
+  voplica.types.ai.common.SubjectCategory category = 3;
+  bool usage_for_nsfw_allowed = 4;
+  voplica.types.base.LikenessCategory based_on_likeness_category = 5;
+  voplica.types.base.LikenessGrantedPermissionVerification likeness_granted_permission_verification = 6;
+  optional string name = 7;
+  optional string description = 8;
+  optional bool nsfw = 9;
+  // Required when the external type maps to CONTROLNET.
+  optional voplica.types.ai.common.ControlnetType controlnet_type = 10;
+  // Mirrors CreateModelRequest.auto_publish: absent = the platform default (true).
+  optional bool auto_publish = 11;
+}
+
+message ImportVariantFields {
+  voplica.types.subscription.StudioSubscriptionType min_required_subscription = 1;
+  bool download_allowed = 2;
+  optional bool revenue_share = 3;
+  // Only meaningful for a single-variant import; defaults to the external version name.
+  optional string variant_name = 4;
+}
+
+message ModelImportItem {
+  string id = 1;
+  string import_id = 2;
+  ModelImportItemKind kind = 3;
+  string model_variant_id = 4;
+  string asset_id = 5;
+  string external_file_id = 6;
+  string file_name = 7;
+  int64 expected_size_bytes = 8;
+  voplica.types.base.JobStatus status = 9;
+  optional string message = 10;
+  optional string file_id = 11;
+  uint32 sort_order = 12;
+  uint64 updated_at = 13;
+  // The role this item's file was registered with (persisted on model_import_items.role), so the
+  // status banner can label it.
+  voplica.types.ai.common.ModelFileRole role = 14;
+}
+
+message ModelImport {
+  string id = 1;
+  string owner_id = 2;
+  string requester_id = 3;
+  voplica.types.vault.ThirdPartyProvider provider = 4;
+  ModelImportKind kind = 5;
+  string source_uri = 6;
+  string external_model_id = 7;
+  optional string external_version_id = 8;
+  string model_id = 9;
+  optional string model_variant_id = 10;
+  voplica.types.base.JobStatus status = 11;
+  optional string message = 12;
+  uint32 total_items = 13;
+  uint32 completed_items = 14;
+  uint32 failed_items = 15;
+  uint64 created_at = 16;
+  optional uint64 started_at = 17;
+  optional uint64 finished_at = 18;
+  repeated ModelImportItem items = 19;
+}

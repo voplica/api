@@ -1,0 +1,777 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.character;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.character";
+option go_package = "voplica.com/api/character";
+option csharp_namespace = "Voplica.Api.Character";
+import "voplica/auth.proto";
+import "voplica/types/character/character.proto";
+import "voplica/types/character/character_look.proto";
+import "voplica/types/character/character_look_draft.proto";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/base/gender_type.proto";
+import "voplica/types/base/publish_status.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/base/string_array.proto";
+import "google/protobuf/empty.proto";
+
+message CreateCharacterRequest {
+  string name = 1;
+  voplica.types.base.GenderType gender = 2;
+  optional string description = 3;
+  voplica.types.base.VisibilityType visibility = 4;
+  // If character is targeted towards nsfw content
+  bool nsfw = 5;
+}
+
+message CreateCharacterResponse {
+  string character_id = 1;
+}
+
+message UpdateCharacterRequest {
+  string character_id = 1;
+  optional string name = 2;
+  optional voplica.types.base.GenderType gender = 3;
+  optional string description = 4;
+  optional voplica.types.base.VisibilityType visibility = 5;
+  // Model assignments
+  optional voplica.types.character.CharacterModelSet models = 6;
+  optional voplica.types.character.CharacterPersonality personality = 7;
+  optional voplica.types.file.AssetSelectionStrategy default_preview = 8;
+  optional string look_prompt = 9;
+  optional voplica.types.base.StringArray tags = 10;
+  optional bool nsfw = 11;
+  optional CharacterLookSelectionStrategy default_look = 12;
+}
+
+// Mirrors `voplica.api.ai.model.ModelVariantSelectionStrategy`.
+message CharacterLookSelectionStrategy {
+  oneof strategy {
+    // Look ID must belong to the updated character.
+    string use_look_id = 1;
+    // Do not set the default look explicitly. Instead, always use the latest created look as the default.
+    google.protobuf.Empty use_latest_look = 2;
+  }
+}
+
+message UpdateCharacterResponse {
+  voplica.types.character.Character character = 1;
+}
+
+message UpdateCharacterPublishStatusRequest {
+  string character_id = 1;
+  voplica.types.base.PublishStatus status = 2;
+}
+
+message UpdateCharacterPublishStatusResponse {
+  voplica.types.base.PublishStatus status = 1;
+}
+
+message DeleteCharacterRequest {
+  string character_id = 1;
+}
+
+message DeleteCharacterResponse {
+}
+
+message GetCharacterRequest {
+  oneof attribute {
+    string character_id = 1;
+    string idempotency_key = 2;
+  }
+  optional CharacterFieldsFetchingOptions fields_fetching_options = 3;
+}
+
+message GetCharacterResponse {
+  voplica.types.character.Character character = 1;
+}
+
+message GetMultiCharactersRequest {
+  repeated string character_ids = 1;
+  optional CharacterFieldsFetchingOptions fields_fetching_options = 2;
+  bool with_metadata = 3;
+}
+
+message CharacterWithMetadata {
+  voplica.types.character.Character character = 1;
+  optional voplica.types.character.CharacterMetadata metadata = 2;
+}
+
+message GetMultiCharactersResponse {
+  repeated CharacterWithMetadata characters_data = 1;
+}
+
+message GetCharacterMetadataRequest {
+  string character_id = 1;
+}
+
+message GetCharacterMetadataResponse {
+  voplica.types.character.CharacterMetadata character_metadata = 1;
+}
+
+message AttachDatasetToCharacterRequest {
+  string character_id = 1;
+  string dataset_id = 2;
+}
+
+message AttachDatasetToCharacterResponse {
+}
+
+message DetachDatasetFromCharacterRequest {
+  string character_id = 1;
+  string dataset_id = 2;
+}
+
+message DetachDatasetFromCharacterResponse {
+}
+
+message GetDatasetsForCharacterRequest {
+  string character_id = 1;
+}
+
+message GetDatasetsForCharacterResponse {
+  repeated string dataset_ids = 1;
+}
+
+message ListCharactersRequest {
+  optional ListCharactersFilters filters = 1;
+  // Max amount of elements per page
+  int64 limit = 2;
+  // How to sort results
+  ListCharactersSorting sort = 3;
+  // Extra options for fields fetching
+  optional CharacterFieldsFetchingOptions fields_fetching_options = 4;
+  // to continue pagination use `next_token` with `before_cursor = false` to fetch the next page or
+  // `prev_token` with `before_cursor = true` to fetch the previous page.
+  optional string cursor = 10;
+  // Used only with `cursor`. If `false` it means fetch data after cursor. If `true` it means fetch data before cursor.
+  bool before = 11;
+  // Check limit + 1 to know if there is more data available
+  // By default is is `false`. Meaning that `more_available` flag won't be returned.
+  // In this case, the only way to verify that there is any data available is to fetch the next page.
+  // Generally this should not be used for infinite scrolls, but can be used if we have buttons like `next`, `previous`.
+  bool check_more_available = 12;
+}
+
+message CharacterFieldsFetchingOptions {
+  // If provided, the found file variant groups will be returned for the default preview asset
+  // (this serves BOTH `Character.default_preview` and the nested
+  // `Character.default_look.default_preview` -- one retriever, mirroring the GenModel pattern)
+  optional voplica.types.file.FilesRetriever default_preview_retriever = 1;
+}
+
+message ListCharactersFilters {
+  optional string owner_id = 1;
+  // This must be set to `PUBLIC` for the following cases:
+  // - When queried without `owner_id`. Permission denied will be returned otherwise.
+  // - When queried for other `owner_id` (i.e. not our Characters). Permission denied will be returned otherwise.
+  optional voplica.types.base.VisibilityType visibility = 2;
+  // This must be set to `PUBLISHED` for the following cases:
+  // - When queried without `owner_id`. Permission denied will be returned otherwise.
+  // - When queried for other `owner_id` (i.e. not our Characters). Permission denied will be returned otherwise.
+  optional voplica.types.base.PublishStatus status = 3;
+  // `true` means to return NSFW characters only.
+  // `false` means to exclude NSFW characters.
+  // unset means to return both NSFW and SFW characters.
+  optional bool nsfw = 4;
+  // Filter by gender
+  optional voplica.types.base.GenderType gender = 5;
+  oneof relation {
+    // Doesn't apply any relation filters
+    google.protobuf.Empty no_relation_filter = 10;
+    // Filter by tag
+    string tag = 11;
+    // Case-insensitive character NAME substring search ('%term%'), composed with the other filters above.
+    // Server-side guards: blank after trim = no filter; 1 char after trim = INVALID_ARGUMENT (min 2 chars);
+    // capped at 100 chars. When set, results are ordered by created_at (keyset) regardless of the
+    // requested trending sort key — mirrors the Voices `query` relation semantics.
+    string query = 12;
+  }
+}
+
+enum CharacterSortKey {
+  MODEL_SORT_KEY_UNSPECIFIED = 0;
+  CREATED_AT = 1;
+  TRENDING_SCORE = 2;
+}
+
+message ListCharactersSorting {
+  CharacterSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListCharactersResponse {
+  repeated voplica.types.character.Character characters = 1;
+  // Token to pass in the next query's Pagination directive to go to the next page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  // If it's missing the last used cursor is essentially the `next_token`
+  optional string next_token = 2;
+  // Token to pass in the next query's Pagination directive to go to the previous page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  // If it's missing the last used cursor is essentially the `prev_token`
+  optional string prev_token = 3;
+  // Returns if there is more data available (i.e. checks `limit + 1`).
+  // Returned only if `check_more_available` is set to `true`
+  optional bool more_available = 4;
+}
+
+message AddCharacterPreviewAssetRequest {
+  string character_id = 1;
+  string preview_asset_id = 2;
+}
+
+message AddCharacterPreviewAssetResponse {
+  string created_asset_id = 1;
+}
+
+message GetCharacterPreviewAssetsRequest {
+  string character_id = 1;
+  // Optionally filter by asset_id. If not provided - all preview assets are returned.
+  optional string asset_id_filter = 2;
+  // Entity-scoped file retrieval (see voplica.types.file.FilesRetriever): if provided, the found
+  // file variant groups will be returned for each preview asset (or for the asset that matched
+  // `asset_id_filter` if provided), resolved with the CHARACTER's access control — public+published
+  // characters' previews (including video previews) are readable by anyone.
+  optional voplica.types.file.FilesRetriever previews_retriever = 3;
+}
+
+message GetCharacterPreviewAssetsResponse {
+  // 0 to 10 images / videos for character preview
+  // Note: file_variant_groups are returned only if requested explicitly
+  repeated voplica.types.file.AssetFileVariantGroups all_previews = 1;
+}
+
+message DeleteCharacterPreviewAssetRequest {
+  string character_id = 1;
+  string preview_asset_id = 2;
+}
+
+message DeleteCharacterPreviewAssetResponse {
+}
+
+message CreateCharacterLookRequest {
+  string character_id = 1;
+  string name = 2;
+  optional string look_prompt = 3;
+  voplica.types.base.MPARating mpa_rating = 4;
+  // Layout of the look's composed sheet. Absent / UNSPECIFIED (0) is stored and read as DEFAULT -
+  // see voplica.types.character.CharacterSheetType.
+  voplica.types.character.CharacterSheetType sheet_type = 5;
+  optional voplica.types.file.FileReference anchor = 6;
+}
+
+message CreateCharacterLookResponse {
+  voplica.types.character.CharacterLook look = 1;
+}
+
+message UpdateCharacterLookRequest {
+  string look_id = 1;
+  optional string name = 2;
+  // Empty string clears the look prompt (the character-level `look_prompt` then applies).
+  optional string look_prompt = 3;
+  optional voplica.types.base.MPARating mpa_rating = 4;
+  // Same mechanism as the character `default_preview`: the asset must already be attached to the look.
+  optional voplica.types.file.AssetSelectionStrategy preview = 5;
+  // OPTIONAL so an update can leave the stored layout alone: unlike the create request, an absent
+  // value here means "do not change", NOT "DEFAULT". Sending UNSPECIFIED (0) explicitly resets the
+  // look to DEFAULT - see voplica.types.character.CharacterSheetType.
+  optional voplica.types.character.CharacterSheetType sheet_type = 6;
+}
+
+message UpdateCharacterLookResponse {
+  voplica.types.character.CharacterLook look = 1;
+}
+
+message DeleteCharacterLookRequest {
+  string look_id = 1;
+}
+
+message DeleteCharacterLookResponse {
+}
+
+message GetCharacterLookRequest {
+  string look_id = 1;
+  optional voplica.types.file.FilesRetriever previews_retriever = 2;
+}
+
+message GetCharacterLookResponse {
+  voplica.types.character.CharacterLook look = 1;
+}
+
+// Same shape as `voplica.api.ai.dataset.MPAFilter` (the platform has no shared filter type; each API
+// package declares its own). MPA filtering follows the filter-driven safety model: the caller supplies
+// the filter, the backend never branches on anonymity.
+message MPAFilter {
+  oneof filter {
+    // Return looks with this mpa rating or below.
+    voplica.types.base.MPARating max_mpa_rating = 1;
+    // `true` means NSFW only (X or XXX). `false` means SFW only (G/PG/PG_13/R).
+    bool nsfw = 2;
+  }
+}
+
+message ListCharacterLooksFilters {
+  optional MPAFilter mpa_filter = 1;
+}
+
+message ListCharacterLooksRequest {
+  string character_id = 1;
+  optional ListCharacterLooksFilters filters = 2;
+  // Max amount of elements per page
+  int64 limit = 3;
+  // Extra options for fields fetching
+  optional CharacterLookFieldsFetchingOptions fields_fetching_options = 4;
+  // to continue pagination use `next_token` with `before = false` to fetch the next page or
+  // `prev_token` with `before = true` to fetch the previous page.
+  optional string cursor = 10;
+  // Used only with `cursor`. If `false` it means fetch data after cursor. If `true` it means fetch data before cursor.
+  bool before = 11;
+  // Check limit + 1 to know if there is more data available.
+  // By default it is `false`. Meaning that `more_available` flag won't be returned.
+  bool check_more_available = 12;
+}
+
+message CharacterLookFieldsFetchingOptions {
+  // If provided, the found file variant groups will be returned as each look's `default_preview`,
+  // resolved with the CHARACTER's access control.
+  optional voplica.types.file.FilesRetriever previews_retriever = 1;
+}
+
+message ListCharacterLooksResponse {
+  // Ordered by `created_at` (newest first).
+  repeated voplica.types.character.CharacterLook looks = 1;
+  // Token to pass in the next query's Pagination directive to go to the next page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  optional string next_token = 2;
+  // Token to pass in the next query's Pagination directive to go to the previous page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  optional string prev_token = 3;
+  // Returns if there is more data available (i.e. checks `limit + 1`).
+  // Returned only if `check_more_available` is set to `true`
+  optional bool more_available = 4;
+}
+
+message AddCharacterLookAssetRequest {
+  string look_id = 1;
+  // Must be an IMAGE_ASSET owned by the character's owner.
+  string asset_id = 2;
+  voplica.types.character.CharacterLookAssetType asset_type = 3;
+}
+
+message AddCharacterLookAssetResponse {
+}
+
+message RemoveCharacterLookAssetRequest {
+  string look_id = 1;
+  string asset_id = 2;
+  optional voplica.types.character.CharacterLookAssetType asset_type = 3;
+}
+
+message RemoveCharacterLookAssetResponse {
+}
+
+message ListCharacterLookAssetsFilters {
+  optional voplica.types.character.CharacterLookAssetType asset_type = 1;
+  optional string asset_id = 2;
+}
+
+enum CharacterLookAssetSortKey {
+  CHARACTER_LOOK_ASSET_SORT_KEY_UNSPECIFIED = 0;
+  ADDED_AT = 1;
+}
+
+message ListCharacterLookAssetsSorting {
+  CharacterLookAssetSortKey sort_key = 1;
+  bool asc_sort = 2;
+}
+
+message ListCharacterLookAssetsRequest {
+  string look_id = 1;
+  optional ListCharacterLookAssetsFilters filters = 2;
+  // Max amount of elements per page
+  int64 limit = 3;
+  // How to sort results
+  ListCharacterLookAssetsSorting sort = 4;
+  // Extra options for fields fetching
+  optional CharacterLookAssetsFetchingOptions fields_fetching_options = 5;
+  // to continue pagination use `next_token` with `before = false` to fetch the next page or
+  // `prev_token` with `before = true` to fetch the previous page.
+  optional string cursor = 10;
+  // Used only with `cursor`. If `false` it means fetch data after cursor. If `true` it means fetch data before cursor.
+  bool before = 11;
+  // Check limit + 1 to know if there is more data available.
+  // By default it is `false`. Meaning that `more_available` flag won't be returned.
+  bool check_more_available = 12;
+}
+
+message CharacterLookAssetsFetchingOptions {
+  // If provided, the found file variant groups will be returned as each asset's `asset_groups`
+  optional voplica.types.file.FilesRetriever asset_retriever = 1;
+}
+
+message ListCharacterLookAssetsResponse {
+  repeated voplica.types.character.CharacterLookAsset assets = 1;
+  // Token to pass in the next query's Pagination directive to go to the next page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  optional string next_token = 2;
+  // Token to pass in the next query's Pagination directive to go to the previous page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  optional string prev_token = 3;
+  // Returns if there is more data available (i.e. checks `limit + 1`).
+  // Returned only if `check_more_available` is set to `true`
+  optional bool more_available = 4;
+}
+
+message CharacterLookDraftFieldsFetchingOptions {
+  // If provided, the found file variant groups will be returned as each draft's `anchor_preview`,
+  // resolved with the OWNER's access control (a draft is never resolved for anyone else).
+  optional voplica.types.file.FilesRetriever previews_retriever = 1;
+  // true = each draft BOUND to a character carries that character's name as `character_name`
+  // (absent for a character-less draft); false (the default) = no name is resolved.
+  bool include_character_name = 2;
+}
+
+message CreateCharacterLookDraftRequest {
+  string character_id = 1;
+  optional string source_look_id = 2;
+  // Absent / UNSPECIFIED reads as CHARACTER_SHEET_TYPE_DEFAULT.
+  voplica.types.character.CharacterSheetType sheet_type = 3;
+}
+
+message CreateCharacterLookDraftResponse {
+  voplica.types.character.CharacterLookDraft draft = 1;
+}
+
+message CloneCharacterLookToDraftRequest {
+  // The look to clone. Must exist and belong to a character OWNED BY THE CALLER.
+  string look_id = 1;
+}
+
+message CloneCharacterLookToDraftResponse {
+  // The new draft, exactly as GetCharacterLookDraft would return it (no previews - this RPC takes
+  // no fetching options, same as Create, Update and Bind).
+  voplica.types.character.CharacterLookDraft draft = 1;
+}
+
+message GetCharacterLookDraftRequest {
+  string draft_id = 1;
+  optional CharacterLookDraftFieldsFetchingOptions fields_fetching_options = 2;
+}
+
+message GetCharacterLookDraftResponse {
+  voplica.types.character.CharacterLookDraft draft = 1;
+}
+
+message UpdateCharacterLookDraftRequest {
+  string draft_id = 1;
+  optional voplica.types.file.FileReference anchor = 2;
+  optional voplica.types.character.CharacterLookDraftAnchorKind anchor_kind = 3;
+  repeated voplica.types.character.CharacterLookDraftApprovedView approved_views = 4;
+  repeated voplica.types.character.CharacterLookDraftStageHistory stage_history = 5;
+  optional voplica.types.character.CharacterSheetType sheet_type = 6;
+  optional voplica.types.character.CharacterLookDraftState state = 7;
+  // `approved_views` / `stage_history` are repeated and therefore have no presence of their own.
+  // Set the matching flag to REPLACE that collection with what this request carries (including the
+  // empty list); leave it false to keep the stored collection untouched.
+  bool replace_approved_views = 8;
+  bool replace_stage_history = 9;
+  optional string name = 10;
+  // Absent = leave as it is; an EMPTY string CLEARS, the same convention `name` above uses.
+  optional string anchor_model_id = 11;
+  optional string edit_model_id = 12;
+}
+
+message UpdateCharacterLookDraftResponse {
+  voplica.types.character.CharacterLookDraft draft = 1;
+}
+
+message DeleteCharacterLookDraftRequest {
+  string draft_id = 1;
+}
+
+message DeleteCharacterLookDraftResponse {
+}
+
+// Give a CHARACTER-LESS draft its character. ONCE-ONLY, in one direction: unbound -> bound. A bound
+// draft can never be re-bound to a different character and can never be un-bound, because the work
+// already recorded on it - approved views, iteration history, the anchor - was done FOR the identity
+// the wizard is building, and moving that wholesale to another character would silently rewrite what
+// somebody approved.
+//
+// TWO OWNERSHIP PROOFS, checked in this order:
+//   1. the DRAFT must be the caller's - a foreign or unknown draft answers the byte-identical
+//      NOT_FOUND every other draft RPC answers, BEFORE the character is looked at at all, so this
+//      RPC never becomes a way to ask about somebody else's draft;
+//   2. the CHARACTER must exist and be the caller's - a foreign character and a non-existent one
+//      answer identically, exactly as CreateCharacterLookDraft already answers them.
+//
+// RETRY SAFETY: re-binding to the SAME character succeeds and changes nothing. That is not a hole in
+// once-only - no state moves - and without it a lost response would strand the wizard permanently,
+// since the alternative to a retry is a draft that can never be saved. Binding to a DIFFERENT
+// character is FAILED_PRECONDITION.
+message BindCharacterLookDraftToCharacterRequest {
+  string draft_id = 1;
+  // Must exist and be OWNED BY THE CALLER. Must not be empty: this RPC binds, it never unbinds.
+  string character_id = 2;
+}
+
+message BindCharacterLookDraftToCharacterResponse {
+  // The bound draft, exactly as GetCharacterLookDraft would return it (no previews - this RPC takes
+  // no fetching options, same as Create and Update).
+  voplica.types.character.CharacterLookDraft draft = 1;
+}
+
+message ListCharacterLookDraftsFilters {
+  // Restrict to one lifecycle state - the "continue" surface passes IN_PROGRESS, since terminal
+  // drafts stay listable but are not resumable.
+  optional voplica.types.character.CharacterLookDraftState state = 1;
+}
+
+// Keyset pagination is VERBATIM the ListCharacterLooks shape (limit 3 / cursor 10 / before 11 /
+// check_more_available 12; next 2 / prev 3 / more 4) so every list surface on this service pages
+// identically.
+message ListCharacterLookDraftsRequest {
+  string character_id = 1;
+  optional ListCharacterLookDraftsFilters filters = 2;
+  // Max amount of elements per page
+  int64 limit = 3;
+  // Extra options for fields fetching
+  optional CharacterLookDraftFieldsFetchingOptions fields_fetching_options = 4;
+  // true = EVERY draft of the CALLER: the character-less ones and every character's, in one list,
+  // `created_at` newest first, the same keyset paging; `character_id` is ignored when set. The client
+  // shows each draft's binding from `CharacterLookDraft.character_id` (empty = character-less).
+  // Send it with `character_id` empty; the filters and the fetching options apply as in the other
+  // modes (`include_character_name` names each bound draft's character).
+  bool all_characters = 5;
+  // to continue pagination use `next_token` with `before = false` to fetch the next page or
+  // `prev_token` with `before = true` to fetch the previous page.
+  optional string cursor = 10;
+  // Used only with `cursor`. If `false` it means fetch data after cursor. If `true` it means fetch data before cursor.
+  bool before = 11;
+  // Check limit + 1 to know if there is more data available.
+  // By default it is `false`. Meaning that `more_available` flag won't be returned.
+  bool check_more_available = 12;
+}
+
+message ListCharacterLookDraftsResponse {
+  // The CALLER's drafts for that character - or the CALLER's character-less drafts when the request
+  // carried an empty `character_id`, or EVERY draft of the CALLER when it carried `all_characters` -
+  // ordered by `created_at` (newest first). Never anyone else's, regardless of the character's
+  // visibility.
+  repeated voplica.types.character.CharacterLookDraft drafts = 1;
+  // Token to pass in the next query's Pagination directive to go to the next page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  optional string next_token = 2;
+  // Token to pass in the next query's Pagination directive to go to the previous page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  optional string prev_token = 3;
+  // Returns if there is more data available (i.e. checks `limit + 1`).
+  // Returned only if `check_more_available` is set to `true`
+  optional bool more_available = 4;
+}
+
+service CharacterService {
+  rpc CreateCharacter (CreateCharacterRequest) returns (CreateCharacterResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateCharacter (UpdateCharacterRequest) returns (UpdateCharacterResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateCharacterPublishStatus (UpdateCharacterPublishStatusRequest) returns (UpdateCharacterPublishStatusResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeleteCharacter (DeleteCharacterRequest) returns (DeleteCharacterResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetCharacter (GetCharacterRequest) returns (GetCharacterResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetMultiCharacters (GetMultiCharactersRequest) returns (GetMultiCharactersResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc GetCharacterMetadata (GetCharacterMetadataRequest) returns (GetCharacterMetadataResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc ListCharacters (ListCharactersRequest) returns (ListCharactersResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Add dataset to character
+  rpc AttachDatasetToCharacter (AttachDatasetToCharacterRequest) returns (AttachDatasetToCharacterResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Delete dataset from character
+  rpc DetachDatasetFromCharacter (DetachDatasetFromCharacterRequest) returns (DetachDatasetFromCharacterResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Get datasets for character
+  rpc GetDatasetsForCharacter (GetDatasetsForCharacterRequest) returns (GetDatasetsForCharacterResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc AddCharacterPreviewAsset (AddCharacterPreviewAssetRequest) returns (AddCharacterPreviewAssetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeleteCharacterPreviewAsset (DeleteCharacterPreviewAssetRequest) returns (DeleteCharacterPreviewAssetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetCharacterPreviewAssets (GetCharacterPreviewAssetsRequest) returns (GetCharacterPreviewAssetsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Create a named look for a character.
+  // Maximum 50 looks per character.
+  rpc CreateCharacterLook (CreateCharacterLookRequest) returns (CreateCharacterLookResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateCharacterLook (UpdateCharacterLookRequest) returns (UpdateCharacterLookResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Delete a look: removes the look asset rows and the look, then re-resolves the character's
+  // default look (a manually selected default that is deleted is cleared).
+  rpc DeleteCharacterLook (DeleteCharacterLookRequest) returns (DeleteCharacterLookResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Reads follow the CHARACTER's visibility, exactly like GetCharacter / GetCharacterPreviewAssets:
+  // anonymous viewers of a public+published character can read its looks.
+  rpc GetCharacterLook (GetCharacterLookRequest) returns (GetCharacterLookResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  rpc ListCharacterLooks (ListCharacterLooksRequest) returns (ListCharacterLooksResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Attach an existing IMAGE_ASSET (owned by the character's owner) to a look.
+  rpc AddCharacterLookAsset (AddCharacterLookAssetRequest) returns (AddCharacterLookAssetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc RemoveCharacterLookAsset (RemoveCharacterLookAssetRequest) returns (RemoveCharacterLookAssetResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Character look DRAFTS - the resumable wizard session. ALL SEVEN are ANY_USER, reads included:
+  // a draft is private in-progress work, so unlike the look reads above it does NOT follow the
+  // character's visibility. Reading a draft that is not yours answers exactly as reading one that
+  // does not exist (byte-identical NOT_FOUND) - see the anti-enumeration note on the messages.
+  rpc CreateCharacterLookDraft (CreateCharacterLookDraftRequest) returns (CreateCharacterLookDraftResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // "Clone and Change" - a saved look re-opened as a fresh draft of the caller's. Owner-only, and
+  // a foreign or unknown look answers the same NOT_FOUND every other draft RPC answers. See the
+  // request message for what is copied and what deliberately is not.
+  rpc CloneCharacterLookToDraft (CloneCharacterLookToDraftRequest) returns (CloneCharacterLookToDraftResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetCharacterLookDraft (GetCharacterLookDraftRequest) returns (GetCharacterLookDraftResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc UpdateCharacterLookDraft (UpdateCharacterLookDraftRequest) returns (UpdateCharacterLookDraftResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc DeleteCharacterLookDraft (DeleteCharacterLookDraftRequest) returns (DeleteCharacterLookDraftResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Give a character-less draft its character, once and in one direction. The wizard's
+  // new-character run calls this at SAVE, between creating the character and creating the look.
+  rpc BindCharacterLookDraftToCharacter (BindCharacterLookDraftToCharacterRequest) returns (BindCharacterLookDraftToCharacterResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Lists the CALLER's drafts for a character ("continue building a look"), or - with an empty
+  // `character_id` - the caller's CHARACTER-LESS drafts ("continue a new-character run"), or -
+  // with `all_characters` - EVERY draft of the caller, character-less and bound, in one list.
+  rpc ListCharacterLookDrafts (ListCharacterLookDraftsRequest) returns (ListCharacterLookDraftsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListCharacterLookAssets (ListCharacterLookAssetsRequest) returns (ListCharacterLookAssetsResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+}

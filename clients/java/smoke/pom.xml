@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The registry smoke of .github/workflows/java.yml: an empty Maven project on Java 17 that depends on
+     com.voplica:voplica-api (the version given as -Dvoplica.version) from GitHub Packages, the way an API user's project
+     does, and compiles RegistrySmoke (src/test/java/com/voplica/client) against it. settings.xml beside it holds the
+     registry's credentials. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.voplica.smoke</groupId>
+  <artifactId>voplica-api-smoke</artifactId>
+  <version>0</version>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>17</maven.compiler.release>
+  </properties>
+
+  <repositories>
+    <!-- Before Maven Central, which the super POM adds last; the id names the credentials in settings.xml. -->
+    <repository>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/voplica/api</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.voplica</groupId>
+      <artifactId>voplica-api</artifactId>
+      <version>${voplica.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.4.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.15.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.8.1</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

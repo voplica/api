@@ -1,0 +1,160 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.api.ai.dataset;
+option java_multiple_files = true;
+option java_package = "com.voplica.api.ai.dataset";
+option go_package = "voplica.com/api/ai/dataset";
+option csharp_namespace = "Voplica.Api.Ai.Dataset";
+import "voplica/auth.proto";
+import "voplica/types/ai/common/subject_category.proto";
+import "voplica/types/ai/dataset/dataset_generation.proto";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/workflow/privacy_mode.proto";
+
+// Inline spec for creating the target dataset as part of `GenerateDatasetImages` - the "generate
+// into a NEW dataset" path of the dialog, so the user does not have to create an empty dataset
+// first.
+//
+// Deliberately BOUNDED and deliberately PARTIAL:
+//   - `asset_type` is NOT a field. It is forced to `IMAGE_ASSET`; a generation run can only ever
+//     write images, and the same rule is validated for an existing `dataset_id`.
+//   - the likeness fields (`based_on_likeness_category`,
+//     `likeness_granted_permission_verification`) are NOT here. A caller that must declare a
+//     real-person likeness calls `DatasetService.CreateDataset` first and passes the resulting
+//     `dataset_id` on the `target` oneof instead. Keeping them off the inline path means the
+//     inline path can never under-declare them by omission.
+//   - `revenue_share` (`CreateDatasetRequest` field 6) is NOT here either, and for the same
+//     shape of reason: it is a MONETARY opt-in, and defaulting it from an inline convenience
+//     path would enrol a dataset in revenue sharing as a side effect of generating images -
+//     a commitment the caller never expressed. Omitted means it takes `CreateDatasetRequest`'s
+//     own default (false); a caller who wants revenue sharing creates the dataset explicitly
+//     via `DatasetService.CreateDataset` and passes `dataset_id` on the `target` oneof, exactly
+//     as with the likeness fields above.
+// Everything else defaults exactly as `CreateDatasetRequest` does.
+message NewDatasetSpec {
+  string name = 1;
+  optional string description = 2;
+  // If `false` - only the owner can see or use the dataset.
+  voplica.types.base.VisibilityType search_and_use_visibility_type = 3;
+  // If `true` anyone who can use the dataset will also be able to download its files.
+  bool download_allowed = 4;
+  voplica.types.base.MPARating mpa_rating = 5;
+  // Typically CHARACTER_GENERIC / CHARACTER_FACE for a generated character dataset.
+  voplica.types.ai.common.SubjectCategory best_for_category = 6;
+}
+
+// Starts a synthetic dataset generation run. Restricted to the dataset owner (an existing
+// `dataset_id` must be owned by the caller AND be an `IMAGE_ASSET` dataset) and to a character the
+// caller may use.
+message GenerateDatasetImagesRequest {
+  // Where the generated images land. Exactly one must be set.
+  oneof target {
+    // An EXISTING dataset. Must be owned by the caller and be of type `IMAGE_ASSET`.
+    string dataset_id = 1;
+    // Create a new `IMAGE_ASSET` dataset owned by the caller and generate into it. The created
+    // dataset id is returned on the run (`DatasetGenerationRun.dataset_id`).
+    NewDatasetSpec inline_new_dataset = 2;
+  }
+  // The character every shot is identity-conditioned on.
+  string character_id = 3;
+  repeated string look_ids = 4;
+  // Run tuning. NOTE `params.refine` DEFAULTS TO TRUE when absent - see
+  // `voplica.types.ai.dataset.DatasetGenerationParams.refine`; it must be read presence-aware.
+  voplica.types.ai.dataset.DatasetGenerationParams params = 5;
+  voplica.types.workflow.WorkflowPrivacyMode privacy_mode = 6;
+}
+
+message GenerateDatasetImagesResponse {
+  // The persisted run, already PENDING (or FAILED when the workflow trigger itself failed). Its
+  // `dataset_id` is the created dataset for the inline-new-dataset path, and its
+  // `root_workflow_execution_id` is the execution the user is billed for.
+  voplica.types.ai.dataset.DatasetGenerationRun run = 1;
+}
+
+message GetDatasetGenerationRunRequest {
+  string run_id = 1;
+}
+
+message GetDatasetGenerationRunResponse {
+  voplica.types.ai.dataset.DatasetGenerationRun run = 1;
+}
+
+message ListDatasetGenerationRunsRequest {
+  // Runs of ONE dataset - the Dataset page's generation surface.
+  string dataset_id = 1;
+  // Max amount of elements per page
+  int64 limit = 2;
+  // to continue pagination use `next_token` with `before = false` to fetch the next page or
+  // `prev_token` with `before = true` to fetch the previous page.
+  optional string cursor = 10;
+  // Used only with `cursor`. If `false` it means fetch data after cursor. If `true` it means fetch data before cursor.
+  bool before = 11;
+  // Check limit + 1 to know if there is more data available.
+  // By default it is `false`. Meaning that `more_available` flag won't be returned.
+  bool check_more_available = 12;
+}
+
+message ListDatasetGenerationRunsResponse {
+  // Ordered by `created_at` (newest first).
+  repeated voplica.types.ai.dataset.DatasetGenerationRun runs = 1;
+  // Token to pass in the next query's Pagination directive to go to the next page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  optional string next_token = 2;
+  // Token to pass in the next query's Pagination directive to go to the previous page
+  // It will be missing if this request didn't return any data (i.e. no more data available)
+  optional string prev_token = 3;
+  // Returns if there is more data available (i.e. checks `limit + 1`).
+  // Returned only if `check_more_available` is set to `true`
+  optional bool more_available = 4;
+}
+
+message CancelDatasetGenerationRunRequest {
+  string run_id = 1;
+}
+
+message CancelDatasetGenerationRunResponse {
+  // Will typically be CANCELLING immediately, transitioning to CANCELLED once the worker
+  // acknowledges the cancellation. A run whose engine execution is already gone (a zombie) is
+  // marked CANCELLED directly.
+  voplica.types.base.JobStatus job_status = 1;
+}
+
+service DatasetGenerationService {
+  // Validates the target dataset (owned by the caller, `IMAGE_ASSET`) or creates it from the
+  // inline spec, validates character access and explicit look existence, persists the run, and
+  // executes wrapper `workflow.ai.dataset.generation.v1` AS THE USER (so it is billed like every
+  // other ai workflow). A trigger failure marks the run FAILED and is reported to the caller.
+  rpc GenerateDatasetImages (GenerateDatasetImagesRequest) returns (GenerateDatasetImagesResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc GetDatasetGenerationRun (GetDatasetGenerationRunRequest) returns (GetDatasetGenerationRunResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  rpc ListDatasetGenerationRuns (ListDatasetGenerationRunsRequest) returns (ListDatasetGenerationRunsResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // Cancels the workflow for an in-flight generation run (engine `stopExecution` as the user).
+  // Restricted to the dataset owner OR the user who started the run.
+  rpc CancelDatasetGenerationRun (CancelDatasetGenerationRunRequest) returns (CancelDatasetGenerationRunResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+}

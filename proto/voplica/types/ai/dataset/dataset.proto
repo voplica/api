@@ -1,0 +1,93 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.dataset;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.dataset";
+option go_package = "voplica.com/types/ai/dataset";
+option csharp_namespace = "Voplica.Types.Ai.Dataset";
+import "voplica/types/ai/common/subject_category.proto";
+import "voplica/types/ai/model/model.proto";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/base/likeness_category.proto";
+import "voplica/types/base/job_status.proto";
+import "voplica/types/file/files.proto";
+import "voplica/types/base/asset_type.proto";
+
+// A source `Dataset` is a mutable, user-owned collection of same-type source assets
+// (images, videos, or audio). It only describes which raw assets belong to the dataset.
+// Preparation outputs (recipes, preparations, prepared items with their files and captions,
+// snapshots) are tracked separately - see `voplica/types/ai/dataset/dataset_preparation.proto`.
+message Dataset {
+  string id = 1;
+  string name = 2;
+  uint64 created_at = 3;
+  // Timestamp when the last source asset was attached to the dataset.
+  uint64 last_file_added_at = 4;
+  // Note: `file_variant_groups` are returned only if requested explicitly.
+  optional voplica.types.file.AssetFileVariantGroups default_preview = 5;
+  string owner_id = 6;
+  voplica.types.base.VisibilityType visibility = 7;
+  // Indicates the best model category the dataset could be used for.
+  voplica.types.ai.common.SubjectCategory best_for_category = 8;
+  // If the dataset is of a likeness of a real person or copyright non-free content
+  // then the permission should be granted explicitly.
+  voplica.types.base.LikenessCategory likeness_category = 9;
+  // MPA rating of the content in the dataset or previews.
+  voplica.types.base.MPARating mpa_rating = 10;
+  bool download_allowed = 11;
+  voplica.types.base.AssetType asset_type = 12;
+  // How many source assets are attached to the dataset.
+  uint64 assets_count = 20;
+  // Unique likes count.
+  uint64 likes_count = 21;
+  // How many times the dataset was used in model trainings (sum across all training jobs
+  // that referenced this dataset, regardless of who triggered the training).
+  uint64 used_count = 22;
+  // Engagement metrics (read-only, updated by the platform). Renamed from checks_count/views_count -- see the
+  // checks->views/views->engagement terminology rename.
+  uint64 views_count = 23;
+  uint64 engagement_count = 24;
+}
+
+// Owner-only metadata for a source dataset. Preparation lifecycle hints live here so they
+// are not exposed publicly on the listed `Dataset` payload.
+message DatasetMetadata {
+  string description = 1;
+  // Coarse hint for the owner: `true` when source dataset membership changed after the most
+  // recent owner-triggered preparation run completed. Exact readiness still depends on a
+  // recipe-specific preparation plan (see `PlanDatasetPreparation`).
+  bool has_source_changes_since_latest_preparation = 2;
+  // Manually set default preview asset.
+  // If `false` - the default preview uses the `latest` asset selection strategy.
+  bool default_preview_manual_selected = 3;
+  // Status of the most recent dataset preparation run triggered for this source dataset by
+  // the owner. For non-owner-triggered preparation runs, consult the run record directly
+  // (see `GetDatasetPreparationRun`).
+  voplica.types.base.JobStatus current_dataset_preparation_job_status = 4;
+  // Workflow execution id for the current or most recent owner-triggered preparation run.
+  optional string current_dataset_preparation_workflow_execution_id = 5;
+  // If the last owner-triggered dataset preparation failed, this carries the error message.
+  optional string current_dataset_preparation_message = 6;
+  // Whether the dataset is eligible for revenue sharing.
+  bool revenue_share = 7;
+  // Preparation most recently written by an owner-triggered preparation run, if any. UI
+  // hint only; enumerate all preparations via `ListDatasetPreparations(source_dataset_id)`.
+  // Immutable training snapshots are frozen from preparations at training time, not tracked here.
+  optional string latest_preparation_id = 8;
+  // How many preparations exist for this dataset that the owner can see. Not exposed on
+  // the public `Dataset` payload.
+  uint64 visible_preparations_count = 9;
+  // Run id of the current/most recent owner-triggered preparation.
+  optional string current_dataset_preparation_run_id = 10;
+  // Admin-set kill switch: blocks revenue-share eligibility regardless of the owner's
+  // `revenue_share` flag. Owner/admin view only.
+  optional bool revenue_share_blocked = 11;
+  // Computed eligibility (and, when ineligible, why). Owner/admin view only.
+  voplica.types.ai.model.RevenueShareEligibility revenue_share_eligibility = 12;
+}

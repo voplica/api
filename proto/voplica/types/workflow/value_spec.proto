@@ -1,0 +1,71 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.workflow;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.workflow";
+option go_package = "voplica.com/types/workflow";
+option csharp_namespace = "Voplica.Types.Workflow";
+import "voplica/types/base/param.proto";
+import "voplica/types/workflow/common/value_cast_mode.proto";
+
+message WorkflowInputSpec {
+  WorkflowValueSpec value_spec = 1;
+  // This tells if the incoming data should be strickly the same type as Input or not.
+  // For example, when using cast_mode equal to `CONVERT_ANY_TO_STRUCT` or `CONVERT_ANY_TO_JSON_STRING` then
+  // it means that input can be anything because we will convert the incoming data to Struct or JSON string.
+  // However, by default cast_mode is `REQUIRE_SAME_VALUE_SPEC` - meaning the data type of input data must match
+  // with the data type specification set in `value_spec`.
+  voplica.types.workflow.common.WorkflowValueCastMode cast_mode = 2;
+}
+
+message WorkflowOutputSpec {
+  WorkflowValueSpec value_spec = 1;
+}
+
+// WorkflowValueSpec extended to allow nested MapSchema or nested proto types
+message WorkflowValueSpec {
+  oneof type {
+    WorkflowLiteralSpec literal_type = 1;
+    WorkflowListSchema list_type = 2;
+    WorkflowMapSchema map_type = 3;
+  }
+}
+
+message WorkflowLiteralSpec {
+  voplica.types.base.ParamDataType data_type = 1;
+  // When data_type == ANY_MESSAGE or ANY_ENUM this url is required as it describes what exact Message or Enum is used.
+  optional string proto_type_url = 2;
+  // When data_type == ANY_MESSAGE then this Map schema may represent separate fields of the Message
+  // Notice, this is provided only in `types_spec` and only for root types.
+  // Nested types with `data_type == ANY_MESSAGE` will have `proto_type_url`, but not `map_message_representation`.
+  // Meaning, to get fields of nested types we should search for the type in `types_spec` via the provided `proto_type_url`.
+  // Notice this technique allows us to represent recursive dependencies on itself (when one of the Message's fields is of the type of this Message itself).
+  optional WorkflowMapSchema map_message_representation = 3;
+}
+
+message WorkflowListSchema {
+  WorkflowValueSpec value_spec = 1;
+}
+
+// A WorkflowMapSchema describes constraints / shape for a map value (map<string, WorkflowParamValue>).
+message WorkflowMapSchema {
+  // Explicit key definitions
+  map<string, WorkflowValueSpec> entries = 1;
+  // If specified, it means that any key can be provided in the map.
+  // Each key that is not covered by `entries` will have this schema
+  optional WorkflowValueSpec unspecified_entry_value_spec = 2;
+  // List of required key names
+  repeated string required_keys = 3;
+  // Each `oneof` group contains a list of keys where only one of them is required other keys cannot be provided in the same map
+  repeated WorkflowMapOneOfFields oneof_key_groups = 4;
+}
+
+message WorkflowMapOneOfFields {
+  // List of keys in the same oneof group
+  repeated string keys = 1;
+}

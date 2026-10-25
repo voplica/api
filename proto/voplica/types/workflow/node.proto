@@ -1,0 +1,97 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.workflow;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.workflow";
+option go_package = "voplica.com/types/workflow";
+option csharp_namespace = "Voplica.Types.Workflow";
+import "voplica/types/workflow/value_spec.proto";
+import "voplica/types/workflow/common/node_executor_type.proto";
+import "voplica/types/workflow/common/step_exec_config.proto";
+import "voplica/types/workflow/common/gpu_tier.proto";
+import "voplica/types/base/visibility.proto";
+import "voplica/types/base/publish_status.proto";
+import "voplica/types/subscription/studio_subscription_type.proto";
+import "voplica/types/base/verification_status.proto";
+import "voplica/types/file/files.proto";
+
+// Registry item (reusable)
+message WorkflowNode {
+  string id = 1;
+  string registry_key = 2; // e.g. "image.generator"
+  string name = 3; // human-friendly name, e.g. Image Generator
+  // Automatically published where there is at least one published model variant.
+  // Automatically unpublished if there are no any published model variants.
+  voplica.types.base.PublishStatus status = 4;
+  string owner_id = 5;
+  // Node group visibility type
+  voplica.types.base.VisibilityType visibility = 6;
+  // Minimum subscription level the user should have to use any of the node variants in the group
+  // This is used as denormalization data. For each individual node variant the user should check requirements separately.
+  voplica.types.subscription.StudioSubscriptionType min_required_subscription = 7;
+  // Timestamp when the model was created
+  uint64 created_at = 8;
+  uint64 latest_node_variant_created_at = 9;
+  optional NodeVariantShortPreview default_node_variant = 10;
+  voplica.types.workflow.common.WorkflowNodeExecutorType executor_type = 11; // ACTIVITY | WORKFLOW | CONTAINER | EXTERNAL
+}
+
+message WorkflowNodeMetadata {
+  string node_id = 1;
+  string description = 2;
+}
+
+message NodeVariantShortPreview {
+  string variant_id = 1;
+  // Note: file_variant_groups are returned only if requested explicitly
+  optional voplica.types.file.AssetFileVariantGroups default_preview = 2;
+}
+
+message WorkflowNodeVariant {
+  string variant_id = 1;
+  string parent_node_id = 2;
+  // Node variant name / version
+  string variant_name = 3;
+  voplica.types.base.PublishStatus status = 4;
+  string owner_id = 5;
+  // Node visibility type is inherited from parent node
+  voplica.types.base.VisibilityType visibility = 6;
+  // Minimum subscription level the user should have to use this node variant
+  voplica.types.subscription.StudioSubscriptionType min_required_subscription = 7;
+  uint64 created_at = 8;
+  voplica.types.base.VerificationStatus verification = 9;
+  WorkflowInputSpec input_spec = 10;
+  WorkflowOutputSpec output_spec = 11;
+  voplica.types.workflow.common.WorkflowGpuTier gpu_tier = 12;
+  voplica.types.workflow.common.WorkflowStepExecConfig default_step_exec_config = 13;
+  WorkflowNodeVariantPricing pricing = 14;
+  // Represents the name of the internal Activity / Workflow implementation that will be triggered
+  // when the node is used
+  // Schema for built-in activity / workflow can be inferred automatically from Input and Output data types
+  // Input and Output Messages are guaranteed to be generated from Protobuf. As such, we can take
+  // message descriptor and split it into the Map-based value spec.
+  string trigger_key = 15;
+  // Note: file_variant_groups are returned only if requested explicitly
+  optional voplica.types.file.AssetFileVariantGroups default_preview = 16;
+}
+
+message WorkflowNodeVariantPricing {
+  // Average pricing hint for this node.
+  // This is not the final price, but an average hint on what it might usually cost.
+  // The final pricing is calculated after node iteration is executed.
+  // The hint may be automatically updated overtime after enough statistics accumulated.
+  // milli-credits (1/1000 credit). 1 credit = 1 cent.
+  uint64 credits_pricing_hint_milli = 1;
+  // This is calculated based on the GPU tier automatically, but may be changed by administrator.
+  // Reasons why it could be changed:
+  // - built-in API node. If the node calls other services then pricing is based not solely on run time but
+  //   also on how much those services cost.
+  // - Known nodes that usually run for much longer (like LoRa training) or for shorter periods (like CPU-based image modification)
+  // milli-credits (1/1000 credit). 1 credit = 1 cent.
+  uint64 initial_credits_reservation_milli = 2;
+}

@@ -1,0 +1,29 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.file.meta;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.file.meta";
+option go_package = "voplica.com/types/file/meta";
+option csharp_namespace = "Voplica.Types.File.Meta";
+
+enum FilePartitionType {
+  PARTITION_TYPE_UNSPECIFIED = 0;
+  // Normal single file. The URL can be used to download the file.
+  SINGLE_FILE = 1;
+  // The file is split across multiple smaller files.
+  // The URL will be a JSON array containing objects that have `url`, `from_byte`, and `to_byte`.
+  // Example of the 2000 bytes object:
+  // [{"url":"https://cdn.voplica.com/model/1","from_byte":0,"to_byte":1000},{"url":"https://cdn.voplica.com/model/1","from_byte":`1001`,"to_byte":2000}]
+  RANGED_FILE_PARTS = 2;
+  // The URL can be used to download Video playlist file.
+  // Typically plain text M3U8 playlists (.m3u8) with #EXT- tags (master playlist + media playlists).
+  HLS_MANIFEST = 3;
+  // The URL can be used to download Video playlist file.
+  // XML MPD file (.mpd) with <MPD>, <Period>, <AdaptationSet>, <Representation>, etc.
+  DASH_MANIFEST = 4;
+}

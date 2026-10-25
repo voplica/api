@@ -1,0 +1,35 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica;
+option java_multiple_files = true;
+option java_package = "com.voplica";
+option go_package = "voplica.com/common";
+option csharp_namespace = "Voplica";
+import "google/protobuf/descriptor.proto";
+
+// Who may call an RPC. Every RPC of this API may be called with an API key.
+extend google.protobuf.MethodOptions {
+  optional AuthOption auth = 51777;
+}
+
+message AuthOption {
+  // Who may call the RPC.
+  AuthType auth_type = 1;
+  // True when an API key may call the RPC; true on every RPC published here.
+  bool pat_allowed = 2;
+  reserved 3;
+}
+
+enum AuthType {
+  AUTH_TYPE_UNSPECIFIED = 0;
+  // Anyone, signed in or not; an API key is optional.
+  NOT_REQUIRED = 1;
+  // A signed-in user: an API key or a studio session.
+  ANY_USER = 4;
+  reserved 2, 3, 5, 6;
+}

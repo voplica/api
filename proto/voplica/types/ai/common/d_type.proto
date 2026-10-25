@@ -1,0 +1,26 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.common";
+option go_package = "voplica.com/types/ai/common";
+option csharp_namespace = "Voplica.Types.Ai.Common";
+
+enum DType {
+  D_TYPE_UNSPECIFIED = 0;
+  FLOAT32 = 1; // aka FP32
+  FLOAT16 = 2; // aka FP16
+  BFLOAT16 = 3; // BF16
+  FLOAT64 = 4; // FP64 / double
+  UINT8 = 5; // e.g. image pixels, uint8 activations
+  INT8 = 6; // common quantized storage
+  INT16 = 7;
+  INT32 = 8;
+  BOOL = 9;
+  FLOAT8 = 10;
+}
