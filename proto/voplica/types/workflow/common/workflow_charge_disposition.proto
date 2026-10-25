@@ -24,4 +24,5 @@ enum WorkflowChargeDisposition {
   // A reversal was decided and payments did not apply it (refused, unavailable, or a payments without the
   // rpc): the step's charges stand.
   WORKFLOW_CHARGE_DISPOSITION_NOT_APPLIED = 4;
+  WORKFLOW_CHARGE_DISPOSITION_NOT_CHARGED = 5;
 }

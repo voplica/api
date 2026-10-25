@@ -2,7 +2,7 @@
 
 The public definitions of the Voplica API and the clients published from them: the protobuf files of every public
 RPC, the OpenAPI document of its JSON API and the TypeScript client `@voplica/connect`. The documentation lives at
-<https://docs.voplica.com/> (<https://voplica.github.io/docs/> until its domain is live), built from this tree by the
+<https://docs.voplica.com/>, built from this tree by the
 documentation's own private repository.
 
 | Path | What it holds |

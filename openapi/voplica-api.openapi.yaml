@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Voplica API
-  version: "15.154.0"
+  version: "1.0.0"
   description: |-
     Every unary RPC an API key may call, as plain JSON: POST the request message in its standard protobuf JSON form
     to /<package.Service>/<Method> with `Content-Type: application/json`; the response comes back the same way.
@@ -8329,6 +8329,11 @@ components:
         mpaPublicationPending:
           type: boolean
           title: mpa_publication_pending
+        visibleFromPublicCap:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.base.MPARating'
+            - type: "null"
+          title: visible_from_public_cap
       title: ListAssetVariantsResponse
       additionalProperties: false
     voplica.api.files.ListRegistryAssetVariantsRequest:
@@ -10225,6 +10230,11 @@ components:
             - $ref: '#/components/schemas/voplica.types.account.ProfilePictureRestriction'
             - type: "null"
           title: banner_restriction
+        maxPublicMpaRating:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.base.MPARating'
+            - type: "null"
+          title: max_public_mpa_rating
       title: VoplicaAccount
       additionalProperties: false
     voplica.types.account.VoplicaAccountMetadata:
@@ -18311,6 +18321,11 @@ components:
         mpaPublicationPending:
           type: boolean
           title: mpa_publication_pending
+        visibleFromPublicCap:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.base.MPARating'
+            - type: "null"
+          title: visible_from_public_cap
       title: Asset
       additionalProperties: false
     voplica.types.file.AssetFileVariantGroups:
@@ -18352,6 +18367,11 @@ components:
         mpaPublicationPending:
           type: boolean
           title: mpa_publication_pending
+        visibleFromPublicCap:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.base.MPARating'
+            - type: "null"
+          title: visible_from_public_cap
       title: AssetFileVariantGroups
       additionalProperties: false
     voplica.types.file.AssetSelectionStrategy:
@@ -22699,6 +22719,7 @@ components:
         - WORKFLOW_CHARGE_DISPOSITION_REVERSED
         - WORKFLOW_CHARGE_DISPOSITION_WOULD_REVERSE
         - WORKFLOW_CHARGE_DISPOSITION_NOT_APPLIED
+        - WORKFLOW_CHARGE_DISPOSITION_NOT_CHARGED
     voplica.types.workflow.common.WorkflowContentAutoRegistration:
       type: object
       properties:

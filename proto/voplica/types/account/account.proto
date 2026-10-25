@@ -10,6 +10,7 @@ option java_multiple_files = true;
 option java_package = "com.voplica.types.account";
 option go_package = "voplica.com/types/account";
 option csharp_namespace = "Voplica.Types.Account";
+import "voplica/types/base/mpa_rating.proto";
 
 // A profile picture the platform's analysis flagged as a policy violation is hidden from non-owners until an admin
 // reviews it. The state is per picture and bound to the asset id it is about, so replacing the picture drops the
@@ -69,6 +70,7 @@ message VoplicaAccount {
   reserved 6;
   optional ProfilePictureRestriction avatar_restriction = 7;
   optional ProfilePictureRestriction banner_restriction = 8;
+  optional voplica.types.base.MPARating max_public_mpa_rating = 9;
 }
 
 message VoplicaAccountMetadata {

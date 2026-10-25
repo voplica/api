@@ -166,6 +166,7 @@ message ListAssetVariantsResponse {
   optional string readiness_message = 6;
   bool hidden_from_non_owners = 7;
   bool mpa_publication_pending = 8;
+  optional voplica.types.base.MPARating visible_from_public_cap = 9;
 }
 
 message ListRegistryAssetVariantsRequest {

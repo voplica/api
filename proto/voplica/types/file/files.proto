@@ -127,6 +127,7 @@ message AssetFileVariantGroups {
   optional string readiness_message = 7;
   bool hidden_from_non_owners = 8;
   bool mpa_publication_pending = 9;
+  optional voplica.types.base.MPARating visible_from_public_cap = 10;
 }
 
 message Asset {
@@ -158,6 +159,7 @@ message Asset {
   optional string readiness_message = 15;
   bool hidden_from_non_owners = 16;
   bool mpa_publication_pending = 17;
+  optional voplica.types.base.MPARating visible_from_public_cap = 18;
 }
 
 message FileVariantGroup {
