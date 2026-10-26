@@ -18,7 +18,7 @@ enum FilePartitionType {
   // The file is split across multiple smaller files.
   // The URL will be a JSON array containing objects that have `url`, `from_byte`, and `to_byte`.
   // Example of the 2000 bytes object:
-  // [{"url":"https://cdn.voplica.com/model/1","from_byte":0,"to_byte":1000},{"url":"https://cdn.voplica.com/model/1","from_byte":`1001`,"to_byte":2000}]
+  // `[{"url":"https://cdn.voplica.com/model/1","from_byte":0,"to_byte":1000},{"url":"https://cdn.voplica.com/model/1","from_byte":1001,"to_byte":2000}]`
   RANGED_FILE_PARTS = 2;
   // The URL can be used to download Video playlist file.
   // Typically plain text M3U8 playlists (.m3u8) with #EXT- tags (master playlist + media playlists).

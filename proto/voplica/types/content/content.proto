@@ -71,6 +71,7 @@ message Content {
   bool publication_pending = 15;
   bool publication_refused = 16;
   bool uploaded_song_lineage = 17;
+  reserved 18;
   // Engagement metrics (read-only, updated by the platform). Renamed from views_count/checks_count -- see the
   // checks->views/views->engagement terminology rename.
   uint64 likes_count = 20;

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Voplica API
-  version: "1.0.0"
+  version: "1.0.1"
   description: |-
     Every unary RPC an API key may call, as plain JSON: POST the request message in its standard protobuf JSON form
     to /<package.Service>/<Method> with `Content-Type: application/json`; the response comes back the same way.
