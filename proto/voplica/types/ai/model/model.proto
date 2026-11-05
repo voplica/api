@@ -101,6 +101,9 @@ message ModelVariantShortPreview {
   uint64 created_at = 3;
   // Note: file_variant_groups are returned only if requested explicitly
   optional voplica.types.file.AssetFileVariantGroups default_preview = 4;
+  // The variant's safe default preview (ModelVariant.safe_default_preview); file_variant_groups are returned only if
+  // requested explicitly.
+  optional voplica.types.file.AssetFileVariantGroups safe_default_preview = 6;
   // It's possible to determine output file types from the model family type
   voplica.types.ai.common.ModelFamily model_family = 5;
 }
@@ -136,6 +139,9 @@ message ModelVariant {
   uint64 created_at = 8;
   // Note: file_variant_groups are returned only if requested explicitly
   optional voplica.types.file.AssetFileVariantGroups default_preview = 9;
+  // The owner's choice of a safe alternative to default_preview; absent when none is set. Filled like default_preview:
+  // file_variant_groups are returned only if requested explicitly (the same retriever).
+  optional voplica.types.file.AssetFileVariantGroups safe_default_preview = 24;
   // Asset id that holds model files
   string model_asset_id = 10;
   // It's possible to determine output file types from the model family type
@@ -147,6 +153,13 @@ message ModelVariant {
   voplica.types.base.VerificationStatus files_verification = 12;
   bool inference_enabled = 13;
   bool training_enabled = 14;
+  // Whether people other than the owner may train on this variant. When true, anyone who may use the model may also
+  // train on it: fine-tune these weights further, or train a LoRA on them. The owner always may. Only the owner (or an
+  // administrator) sets it, when creating or updating the variant; it is true unless the owner turned it off, and an
+  // absent value reads as true. It is a permission, not a capability: training_enabled says whether these weights can
+  // be trained at all, so a variant is trainable for a user when training_enabled is true and the user owns the variant
+  // or training_allowed is true. A training job that names a variant its caller may not train on is answered NOT_FOUND.
+  optional bool training_allowed = 25;
   // The owner's (or an admin's) manual declaration of how these weights want to be sampled. Public, like the
   // rest of this message: it is a property of the weights, and the variant's own name usually says it out
   // loud anyway. A PLAIN enum rather than `optional` -- `SAMPLING_REGIME_UNSPECIFIED` is a real, meaningful

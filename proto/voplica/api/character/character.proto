@@ -45,6 +45,9 @@ message UpdateCharacterRequest {
   optional voplica.types.character.CharacterModelSet models = 6;
   optional voplica.types.character.CharacterPersonality personality = 7;
   optional voplica.types.file.AssetSelectionStrategy default_preview = 8;
+  // Sets or clears the safe default preview (Character.safe_default_preview); unset = unchanged. use_asset_id must name
+  // a preview already attached to this character.
+  optional voplica.types.file.SafePreviewSelection safe_default_preview = 13;
   optional string look_prompt = 9;
   optional voplica.types.base.StringArray tags = 10;
   optional bool nsfw = 11;

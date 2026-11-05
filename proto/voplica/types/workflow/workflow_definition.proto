@@ -58,6 +58,9 @@ message WorkflowVariantShortPreview {
   string variant_id = 1;
   // Note: file_variant_groups are returned only if requested explicitly
   optional voplica.types.file.AssetFileVariantGroups default_preview = 2;
+  // The variant's safe default preview (WorkflowVariant.safe_default_preview); file_variant_groups are returned only
+  // if requested explicitly.
+  optional voplica.types.file.AssetFileVariantGroups safe_default_preview = 3;
 }
 
 message WorkflowVariant {
@@ -86,6 +89,9 @@ message WorkflowVariant {
   voplica.types.base.PublishStatus status = 12;
   // Note: file_variant_groups are returned only if requested explicitly
   optional voplica.types.file.AssetFileVariantGroups default_preview = 13;
+  // The owner's choice of a safe alternative to default_preview; absent when none is set. Filled like
+  // default_preview: file_variant_groups are returned only if requested explicitly (the same retriever).
+  optional voplica.types.file.AssetFileVariantGroups safe_default_preview = 19;
   // Minimum subscription level the user should have to use this workflow variant.
   // This should be equal of higher of all `min_required_subscription` used in Steps (Nodes or Child Workflows)
   voplica.types.subscription.StudioSubscriptionType min_required_subscription = 14;

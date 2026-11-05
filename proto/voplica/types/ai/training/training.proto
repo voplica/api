@@ -79,6 +79,9 @@ message ModelTrainingConfig {
   // Reproducibility relies on model-variant weight FILES being immutable once verified -
   // replacing a variant's files in place would silently change what "the same base" means
   // for past runs.
+  // It must name a variant the job's owner may train on: their own, or a public, published one whose owner allows
+  // training (`ModelVariant.training_allowed`), with `training_enabled` true either way. Any other variant is answered
+  // NOT_FOUND, at creation, at start, and again when the run begins.
   optional string base_model_variant_id = 2;
   // Destination model type (i.e. what kind of model are we training: full checkpoint,
   // LoRA, ControlNet, etc.).
@@ -105,6 +108,9 @@ message ModelTrainingContinueFrom {
   oneof continue_from {
     // Loads only the weights of the model variant to continue training. Optimizer,
     // scheduler, tokenizer state are NOT restored. Use lower initial learning rate.
+    // The variant must be one the job's owner may train on (as `base_model_variant_id`); another
+    // owner's variant must also allow downloads (`GenModelVariantMetadata.download_allowed`),
+    // because continuing produces full weights. Otherwise NOT_FOUND.
     string model_variant_id = 1;
     // Loads weights plus optimizer, scheduler, and any other metadata needed to continue
     // training, when the trainer can verify the metadata is compatible. Falls back to

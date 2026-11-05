@@ -185,6 +185,9 @@ message FileVariantFilter {
   // if `true` it returns all matched files.
   // if `false` it returns only the best matched file (or none if no matches).
   bool return_all_matched_files = 3;
+  // How long, in seconds, the URIs of the files this filter returns stay valid. If not provided - the service's
+  // default lifetime. Never longer than that default, whatever is asked.
+  optional int32 url_lifetime_seconds = 5;
   oneof variant {
     NoOpFilter no_op = 10; // to return all / any files
     SkipAllFilter skip_all = 11; // to return no files
@@ -300,6 +303,16 @@ message AssetSelectionStrategy {
     string use_asset_id = 1;
     // Do not set default preview explicitly. Instead, always use the latest added preview as the default.
     google.protobuf.Empty use_latest_asset = 2;
+  }
+}
+
+// How an owner sets the entity's safe default preview: one of its attached preview assets, or nothing.
+message SafePreviewSelection {
+  oneof selection {
+    // The asset id of a preview already attached to the entity.
+    string use_asset_id = 1;
+    // Removes the safe default preview.
+    google.protobuf.Empty clear = 2;
   }
 }
 

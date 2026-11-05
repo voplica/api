@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Voplica API
-  version: "1.0.1"
+  version: "1.4.0"
   description: |-
     Every unary RPC an API key may call, as plain JSON: POST the request message in its standard protobuf JSON form
     to /<package.Service>/<Method> with `Content-Type: application/json`; the response comes back the same way.
@@ -3455,6 +3455,14 @@ components:
             - $ref: '#/components/schemas/voplica.types.file.AssetSelectionStrategy'
             - type: "null"
           title: default_preview
+        safeDefaultPreview:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.file.SafePreviewSelection'
+            - type: "null"
+          title: safe_default_preview
+          description: |-
+            Sets or clears the safe default preview (Dataset.safe_default_preview); unset = unchanged. use_asset_id must name a
+             preview already attached to this dataset.
         mpaRating:
           oneOf:
             - $ref: '#/components/schemas/voplica.types.base.MPARating'
@@ -3717,6 +3725,14 @@ components:
              Useful when the model variant ships transformer weights only, but needs text encoder, vae, and other parts from
              a base model.
              Useful not to upload duplicate model files.
+        trainingAllowed:
+          type:
+            - boolean
+            - "null"
+          title: training_allowed
+          description: |-
+            If `true` anyone who can use the model will also be able to train on it: fine-tune these weights further, or train
+             a LoRA on them. If `false` only the owner may. Absent ⇒ `true` (see `ModelVariant.training_allowed`).
       title: CreateModelVariantRequest
       additionalProperties: false
     voplica.api.ai.model.CreateModelVariantResponse:
@@ -4758,6 +4774,14 @@ components:
             - $ref: '#/components/schemas/voplica.types.file.AssetSelectionStrategy'
             - type: "null"
           title: default_preview
+        safeDefaultPreview:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.file.SafePreviewSelection'
+            - type: "null"
+          title: safe_default_preview
+          description: |-
+            Sets or clears the safe default preview (ModelVariant.safe_default_preview); unset = unchanged. use_asset_id must
+             name a preview already attached to this model variant.
         basedOnModelVariantId:
           type:
             - string
@@ -4786,6 +4810,14 @@ components:
             - string
             - "null"
           title: declared_external_ref
+        trainingAllowed:
+          type:
+            - boolean
+            - "null"
+          title: training_allowed
+          description: |-
+            Sets `ModelVariant.training_allowed`; absent = unchanged. Writable by the variant's owner or an administrator, as
+             every other field of this request.
       title: UpdateModelVariantRequest
       additionalProperties: false
     voplica.api.ai.model.UpdateModelVariantResponse:
@@ -4916,6 +4948,14 @@ components:
             Optional base variant to inherit shared model files from (text encoder, VAE, etc.) when
              the checkpoint only ships the trained weights. Avoids re-uploading multi-GB shared
              components. See `CreateModelVariantRequest.based_on_model_variant_id`.
+        trainingAllowed:
+          type:
+            - boolean
+            - "null"
+          title: training_allowed
+          description: |-
+            If true anyone who can use the model can also train on the variant (fine-tune it, or train a LoRA on it); the owner
+             always may. Absent ⇒ true. See `CreateModelVariantRequest.training_allowed`.
       title: CreateModelVariantFromTrainingCheckpointRequest
       additionalProperties: false
       description: |-
@@ -7212,6 +7252,14 @@ components:
             - $ref: '#/components/schemas/voplica.types.file.AssetSelectionStrategy'
             - type: "null"
           title: default_preview
+        safeDefaultPreview:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.file.SafePreviewSelection'
+            - type: "null"
+          title: safe_default_preview
+          description: |-
+            Sets or clears the safe default preview (Character.safe_default_preview); unset = unchanged. use_asset_id must name
+             a preview already attached to this character.
         lookPrompt:
           type:
             - string
@@ -10018,6 +10066,14 @@ components:
             - $ref: '#/components/schemas/voplica.types.file.AssetSelectionStrategy'
             - type: "null"
           title: default_preview
+        safeDefaultPreview:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.file.SafePreviewSelection'
+            - type: "null"
+          title: safe_default_preview
+          description: |-
+            Sets or clears the safe default preview (WorkflowVariant.safe_default_preview); unset = unchanged. use_asset_id
+             must name a preview already attached to this workflow variant.
         inputsBlockPosition:
           oneOf:
             - $ref: '#/components/schemas/voplica.types.base.Point2D'
@@ -10336,6 +10392,7 @@ components:
         - WAN_3_0_PRIME
         - FLUX_3_KLEIN
         - FLUX_3_KLEIN_BASE
+        - NANO_BANANA_2_1
     voplica.types.ai.common.ModelFileRole:
       type: string
       title: ModelFileRole
@@ -10634,6 +10691,14 @@ components:
             - type: "null"
           title: default_preview
           description: 'Note: `file_variant_groups` are returned only if requested explicitly.'
+        safeDefaultPreview:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.file.AssetFileVariantGroups'
+            - type: "null"
+          title: safe_default_preview
+          description: |-
+            The owner's choice of a safe alternative to `default_preview`; absent when none is set. Filled like
+             `default_preview`: `file_variant_groups` are returned only if requested explicitly (the same retriever).
         ownerId:
           type: string
           title: owner_id
@@ -13736,6 +13801,14 @@ components:
             - "null"
           title: variant_name
           description: Only meaningful for a single-variant import; defaults to the external version name.
+        trainingAllowed:
+          type:
+            - boolean
+            - "null"
+          title: training_allowed
+          description: |-
+            As `CreateModelVariantRequest.training_allowed`: whether anyone who can use the model may also train on it.
+             Absent ⇒ `true`.
       title: ImportVariantFields
       additionalProperties: false
     voplica.types.ai.model.ImportVersionSelection:
@@ -14078,6 +14151,14 @@ components:
             - type: "null"
           title: default_preview
           description: 'Note: file_variant_groups are returned only if requested explicitly'
+        safeDefaultPreview:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.file.AssetFileVariantGroups'
+            - type: "null"
+          title: safe_default_preview
+          description: |-
+            The owner's choice of a safe alternative to default_preview; absent when none is set. Filled like default_preview:
+             file_variant_groups are returned only if requested explicitly (the same retriever).
         modelAssetId:
           type: string
           title: model_asset_id
@@ -14102,6 +14183,18 @@ components:
         trainingEnabled:
           type: boolean
           title: training_enabled
+        trainingAllowed:
+          type:
+            - boolean
+            - "null"
+          title: training_allowed
+          description: |-
+            Whether people other than the owner may train on this variant. When true, anyone who may use the model may also
+             train on it: fine-tune these weights further, or train a LoRA on them. The owner always may. Only the owner (or an
+             administrator) sets it, when creating or updating the variant; it is true unless the owner turned it off, and an
+             absent value reads as true. It is a permission, not a capability: training_enabled says whether these weights can
+             be trained at all, so a variant is trainable for a user when training_enabled is true and the user owns the variant
+             or training_allowed is true. A training job that names a variant its caller may not train on is answered NOT_FOUND.
         samplingRegime:
           allOf:
             - $ref: '#/components/schemas/voplica.types.ai.model.ModelVariantSamplingRegime'
@@ -14172,6 +14265,14 @@ components:
             - type: "null"
           title: default_preview
           description: 'Note: file_variant_groups are returned only if requested explicitly'
+        safeDefaultPreview:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.file.AssetFileVariantGroups'
+            - type: "null"
+          title: safe_default_preview
+          description: |-
+            The variant's safe default preview (ModelVariant.safe_default_preview); file_variant_groups are returned only if
+             requested explicitly.
         modelFamily:
           allOf:
             - $ref: '#/components/schemas/voplica.types.ai.common.ModelFamily'
@@ -14481,6 +14582,9 @@ components:
              Reproducibility relies on model-variant weight FILES being immutable once verified -
              replacing a variant's files in place would silently change what "the same base" means
              for past runs.
+             It must name a variant the job's owner may train on: their own, or a public, published one whose owner allows
+             training (`ModelVariant.training_allowed`), with `training_enabled` true either way. Any other variant is answered
+             NOT_FOUND, at creation, at start, and again when the run begins.
         modelType:
           allOf:
             - $ref: '#/components/schemas/voplica.types.ai.common.ModelType'
@@ -14545,6 +14649,9 @@ components:
               description: |-
                 Loads only the weights of the model variant to continue training. Optimizer,
                  scheduler, tokenizer state are NOT restored. Use lower initial learning rate.
+                 The variant must be one the job's owner may train on (as `base_model_variant_id`); another
+                 owner's variant must also allow downloads (`GenModelVariantMetadata.download_allowed`),
+                 because continuing produces full weights. Otherwise NOT_FOUND.
           title: model_variant_id
         - type: object
           properties:
@@ -16876,6 +16983,14 @@ components:
             - type: "null"
           title: default_preview
           description: 'Note: file_variant_groups are returned only if requested explicitly'
+        safeDefaultPreview:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.file.AssetFileVariantGroups'
+            - type: "null"
+          title: safe_default_preview
+          description: |-
+            The owner's choice of a safe alternative to default_preview; absent when none is set. Filled like default_preview:
+             file_variant_groups are returned only if requested explicitly (the same retriever).
         nsfw:
           type: boolean
           title: nsfw
@@ -18955,6 +19070,15 @@ components:
           description: |-
             if `true` it returns all matched files.
              if `false` it returns only the best matched file (or none if no matches).
+        urlLifetimeSeconds:
+          type:
+            - integer
+            - "null"
+          title: url_lifetime_seconds
+          format: int32
+          description: |-
+            How long, in seconds, the URIs of the files this filter returns stay valid. If not provided - the service's
+             default lifetime. Never longer than that default, whatever is asked.
       title: FileVariantFilter
     voplica.types.file.FileVariantGroup:
       type: object
@@ -19235,6 +19359,40 @@ components:
       type: object
       title: ObjectInfo
       additionalProperties: false
+    voplica.types.file.SafePreviewSelection:
+      type: object
+      anyOf:
+        - type: object
+          properties:
+            clear:
+              allOf:
+                - $ref: '#/components/schemas/google.protobuf.Empty'
+              title: clear
+              description: Removes the safe default preview.
+          title: clear
+        - type: object
+          properties:
+            useAssetId:
+              type: string
+              title: use_asset_id
+              description: The asset id of a preview already attached to the entity.
+          title: use_asset_id
+      unevaluatedProperties: false
+      not:
+        allOf:
+          - anyOf:
+              - required:
+                  - clear
+              - required:
+                  - useAssetId
+          - not:
+              oneOf:
+                - required:
+                    - clear
+                - required:
+                    - useAssetId
+      title: SafePreviewSelection
+      description: 'How an owner sets the entity''s safe default preview: one of its attached preview assets, or nothing.'
     voplica.types.file.SkipAllFilter:
       type: object
       title: SkipAllFilter
@@ -22617,6 +22775,14 @@ components:
             - type: "null"
           title: default_preview
           description: 'Note: file_variant_groups are returned only if requested explicitly'
+        safeDefaultPreview:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.file.AssetFileVariantGroups'
+            - type: "null"
+          title: safe_default_preview
+          description: |-
+            The owner's choice of a safe alternative to default_preview; absent when none is set. Filled like
+             default_preview: file_variant_groups are returned only if requested explicitly (the same retriever).
         minRequiredSubscription:
           allOf:
             - $ref: '#/components/schemas/voplica.types.subscription.StudioSubscriptionType'
@@ -22700,6 +22866,14 @@ components:
             - type: "null"
           title: default_preview
           description: 'Note: file_variant_groups are returned only if requested explicitly'
+        safeDefaultPreview:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.file.AssetFileVariantGroups'
+            - type: "null"
+          title: safe_default_preview
+          description: |-
+            The variant's safe default preview (WorkflowVariant.safe_default_preview); file_variant_groups are returned only
+             if requested explicitly.
       title: WorkflowVariantShortPreview
       additionalProperties: false
     voplica.types.workflow.common.StepErrorHandlingType:

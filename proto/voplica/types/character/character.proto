@@ -28,6 +28,9 @@ message Character {
   voplica.types.base.PublishStatus status = 7;
   // Note: file_variant_groups are returned only if requested explicitly
   optional voplica.types.file.AssetFileVariantGroups default_preview = 8;
+  // The owner's choice of a safe alternative to default_preview; absent when none is set. Filled like default_preview:
+  // file_variant_groups are returned only if requested explicitly (the same retriever).
+  optional voplica.types.file.AssetFileVariantGroups safe_default_preview = 13;
   // Means this character is intended to produce NSFW content.
   // This flag must be `true` if any of these is `true`:
   // - any of the used model variants are related to NSFW model.

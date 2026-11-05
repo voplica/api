@@ -86,6 +86,9 @@ message UpdateDatasetRequest {
   optional bool revenue_share = 6;
   optional voplica.types.ai.common.SubjectCategory best_for_category = 7;
   optional voplica.types.file.AssetSelectionStrategy default_preview = 8;
+  // Sets or clears the safe default preview (Dataset.safe_default_preview); unset = unchanged. use_asset_id must name a
+  // preview already attached to this dataset.
+  optional voplica.types.file.SafePreviewSelection safe_default_preview = 10;
   // The owner may raise or lower the rating; UNRECOGNIZED is refused; an explicit MPA_RATING_UNSPECIFIED on an
   // already-RATED dataset is refused too (a no-op on an unrated one).
   optional voplica.types.base.MPARating mpa_rating = 9;

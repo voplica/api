@@ -233,6 +233,9 @@ message ImportVariantFields {
   optional bool revenue_share = 3;
   // Only meaningful for a single-variant import; defaults to the external version name.
   optional string variant_name = 4;
+  // As `CreateModelVariantRequest.training_allowed`: whether anyone who can use the model may also train on it.
+  // Absent ⇒ `true`.
+  optional bool training_allowed = 5;
 }
 
 message ModelImportItem {

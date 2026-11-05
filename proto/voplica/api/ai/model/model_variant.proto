@@ -39,6 +39,9 @@ message CreateModelVariantRequest {
   // a base model.
   // Useful not to upload duplicate model files.
   optional string based_on_model_variant_id = 8;
+  // If `true` anyone who can use the model will also be able to train on it: fine-tune these weights further, or train
+  // a LoRA on them. If `false` only the owner may. Absent ⇒ `true` (see `ModelVariant.training_allowed`).
+  optional bool training_allowed = 9;
 }
 
 message CreateModelVariantResponse {
@@ -125,6 +128,9 @@ message UpdateModelVariantRequest {
   // remove every trigger word.
   repeated string trigger_words = 7;
   optional voplica.types.file.AssetSelectionStrategy default_preview = 8;
+  // Sets or clears the safe default preview (ModelVariant.safe_default_preview); unset = unchanged. use_asset_id must
+  // name a preview already attached to this model variant.
+  optional voplica.types.file.SafePreviewSelection safe_default_preview = 13;
   // An empty string removes `based_on_model_variant_id` from the model variant.
   optional string based_on_model_variant_id = 9;
   // Remove every trigger word. A plain bool, not `optional`: absent and false are the SAME
@@ -137,6 +143,9 @@ message UpdateModelVariantRequest {
   // `SAMPLING_REGIME_UNSPECIFIED` clears it and lets the model family decide, and either concrete value sets it.
   optional voplica.types.ai.model.ModelVariantSamplingRegime sampling_regime = 11;
   optional string declared_external_ref = 12;
+  // Sets `ModelVariant.training_allowed`; absent = unchanged. Writable by the variant's owner or an administrator, as
+  // every other field of this request.
+  optional bool training_allowed = 14;
 }
 
 message UpdateModelVariantResponse {

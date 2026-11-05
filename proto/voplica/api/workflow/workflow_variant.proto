@@ -123,6 +123,9 @@ message UpdateWorkflowVariantRequest {
   // Run policy configuration
   optional voplica.types.workflow.WorkflowRunPolicy run_policy = 6;
   optional voplica.types.file.AssetSelectionStrategy default_preview = 7;
+  // Sets or clears the safe default preview (WorkflowVariant.safe_default_preview); unset = unchanged. use_asset_id
+  // must name a preview already attached to this workflow variant.
+  optional voplica.types.file.SafePreviewSelection safe_default_preview = 11;
   // Optional inputs block position
   optional voplica.types.base.Point2D inputs_block_position = 8;
   // Optional outputs block position

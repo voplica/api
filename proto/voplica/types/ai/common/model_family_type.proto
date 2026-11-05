@@ -84,4 +84,9 @@ enum ModelFamily {
   WAN_3_0_PRIME = 23 [(model_family_extension) = { label: "WAN 3.0 Prime", possible_outputs: [VIDEO_FILE], generation_modes: [T2V, I2V], hosted: False, third_party: True }];
   FLUX_3_KLEIN = 24 [(model_family_extension) = { label: "FLUX_3_KLEIN", possible_outputs: [IMAGE_FILE], lora_compatibility: [FLUX_3_KLEIN, FLUX_3_KLEIN_BASE], controlnet: False, differential_diffusion: False, generation_modes: [T2I, I2I_EDIT], reference_images: True, component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED, FAST] }];
   FLUX_3_KLEIN_BASE = 25 [(model_family_extension) = { label: "FLUX_3_KLEIN_BASE", possible_outputs: [IMAGE_FILE], lora_compatibility: [FLUX_3_KLEIN, FLUX_3_KLEIN_BASE], controlnet: False, differential_diffusion: False, generation_modes: [T2I, I2I_EDIT], reference_images: True, component_slots: ["transformer", "vae", "text_encoder"], gguf_single_file: True, inference_modes: [BALANCED] }];
+  // Nano Banana 2.1 (Google's displayName for `gemini-nano-banana-2.1`): the update that replaces NANO_BANANA_2 - same
+  // API shape, same third-party lane, same modes and reference images, its own (cheaper) per-image rate card. It renders
+  // 1K, 2K and 4K images only: there is no 0.5K (512 px) tier, so 1K is the smallest size it offers and a smaller
+  // request is served at 1K.
+  NANO_BANANA_2_1 = 26 [(model_family_extension) = { label: "Nano Banana 2.1", possible_outputs: [IMAGE_FILE], generation_modes: [T2I, I2I_EDIT], reference_images: True, hosted: False, third_party: True }];
 }

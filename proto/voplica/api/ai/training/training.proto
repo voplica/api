@@ -63,6 +63,9 @@ message CreateModelVariantFromTrainingCheckpointRequest {
   // the checkpoint only ships the trained weights. Avoids re-uploading multi-GB shared
   // components. See `CreateModelVariantRequest.based_on_model_variant_id`.
   optional string based_on_model_variant_id = 7;
+  // If true anyone who can use the model can also train on the variant (fine-tune it, or train a LoRA on it); the owner
+  // always may. Absent ⇒ true. See `CreateModelVariantRequest.training_allowed`.
+  optional bool training_allowed = 8;
 }
 
 message CreateModelVariantFromTrainingCheckpointResponse {
