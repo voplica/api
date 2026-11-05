@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.0 (2026-11-05)
+
+buf breaking against 1.4.0: none.
+
+- Added messages: `voplica.types.ai.common.AudioWindow`.
+- Added enums: `voplica.types.ai.common.MediaReferenceRole`.
+- Added fields: `voplica.types.ai.common.AudioWindow.end_ms` (2), `voplica.types.ai.common.AudioWindow.start_ms` (1).
+- Added enum values: `voplica.types.ai.common.MediaReferenceRole.AUDIO_REFERENCE` (52), `voplica.types.ai.common.MediaReferenceRole.CANNY_VIDEO` (32), `voplica.types.ai.common.MediaReferenceRole.DEPTH_VIDEO` (31), `voplica.types.ai.common.MediaReferenceRole.DRIVING_AUDIO` (50), `voplica.types.ai.common.MediaReferenceRole.EFFECT_VIDEO` (44), `voplica.types.ai.common.MediaReferenceRole.END_FRAME` (2), `voplica.types.ai.common.MediaReferenceRole.END_VIDEO` (42), `voplica.types.ai.common.MediaReferenceRole.FRAME_AT` (3), `voplica.types.ai.common.MediaReferenceRole.IDENTITY_IMAGES` (11), `voplica.types.ai.common.MediaReferenceRole.IDENTITY_SHEET` (10), `voplica.types.ai.common.MediaReferenceRole.MEDIA_REFERENCE_ROLE_UNSPECIFIED` (0), `voplica.types.ai.common.MediaReferenceRole.POSE_VIDEO` (30), `voplica.types.ai.common.MediaReferenceRole.SOURCE_VIDEO` (40), `voplica.types.ai.common.MediaReferenceRole.START_FRAME` (1), `voplica.types.ai.common.MediaReferenceRole.START_VIDEO` (41), `voplica.types.ai.common.MediaReferenceRole.STYLE_IMAGE` (20), `voplica.types.ai.common.MediaReferenceRole.STYLE_VIDEO` (43), `voplica.types.ai.common.MediaReferenceRole.VOICE_REFERENCE` (51).
+
 ## 1.4.0 (2026-11-05)
 
 buf breaking against 1.0.1: none.

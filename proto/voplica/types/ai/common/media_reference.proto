@@ -1,0 +1,105 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.common";
+option go_package = "voplica.com/types/ai/common";
+option csharp_namespace = "Voplica.Types.Ai.Common";
+
+// The role a referenced media file plays in a generation request: the `role` of each entry of the image and
+// video generation inputs' `references` (`TypesSpecService.GetMessageSpec` describes those inputs at runtime).
+// The values are banded by media kind and by what they condition: 1-9 frame-conditioning images, 10-19
+// identity, 20-29 style, 30-39 driving control videos, 40-49 whole-video inputs, 50-59 audio.
+//
+// Which roles a model family accepts depends on the family. A role the selected model cannot use fails the
+// request with an error that names the roles it supports - it is never silently reinterpreted - except where a
+// role says otherwise: START_VIDEO and END_VIDEO degrade per family, and STYLE_VIDEO, EFFECT_VIDEO,
+// VOICE_REFERENCE and AUDIO_REFERENCE are dropped with a warning on a model that cannot use them.
+enum MediaReferenceRole {
+  MEDIA_REFERENCE_ROLE_UNSPECIFIED = 0;
+  // Image: conditions the FIRST frame (I2V start frame).
+  START_FRAME = 1;
+  // Image: conditions the LAST frame (supported family-dependent).
+  END_FRAME = 2;
+  // Image: conditions the frame at the reference's `at_frame` index.
+  FRAME_AT = 3;
+  // Image: a pre-composed identity reference sheet (character face + turnaround panels,
+  // props, locations) consumed by reference/in-context conditioning (e.g. the LTX-2.3
+  // Ingredients IC-LoRA). The sheet is used as an identity reference — NOT a start frame.
+  IDENTITY_SHEET = 10;
+  // Image(s): raw identity references of ONE subject; the backend composes a reference
+  // sheet from all IDENTITY_IMAGES that share the same `subject_binding`.
+  IDENTITY_IMAGES = 11;
+  // Image: style / look reference.
+  STYLE_IMAGE = 20;
+  // Video: driving pose control (in-context conditioning).
+  POSE_VIDEO = 30;
+  // Video: driving depth control.
+  DEPTH_VIDEO = 31;
+  // Video: driving canny/edge control.
+  CANNY_VIDEO = 32;
+  // Video: source video for V2V restyling.
+  SOURCE_VIDEO = 40;
+  // Video: the generated clip CONTINUES this one. The first chunk is driven from this video's LAST frames, and the
+  // supplied clip is stitched in front of the result. Mutually exclusive with START_FRAME: when both are supplied
+  // the video wins and the frame is ignored (never an error). A family that cannot extend from several frames uses
+  // this video's last frame as a START_FRAME instead, and a family that takes no start conditioning ignores it; on
+  // every family the delivered video is the supplied clip followed by the generated span - the fallback changes
+  // what the model is conditioned on, never what comes back.
+  START_VIDEO = 41;
+  // Video: the generated clip LEADS INTO this one. The backend conditions the LAST chunk's
+  // ending on this video's FIRST frames and stitches the supplied clip after the result.
+  // Mutually exclusive with END_FRAME on the same rule (video wins). Families without
+  // multi-frame end conditioning fall back to this video's FIRST frame as an END_FRAME -
+  // and the delivered file is then the generated span alone, because a single-frame
+  // fallback has no clip to splice; families without end conditioning at all ignore it.
+  END_VIDEO = 42;
+  // Video: a STYLE reference for a new generation. The render takes this clip's look - its rendering, colours, line
+  // work and shading; its people, objects, setting, framing, text, logos and sound do not transfer. Best with a
+  // clip that is mostly the look itself (a clip that shows a clear place can bring that place along). MiniMax H3
+  // only, in T2V and I2V (a new video, an extension included); a V2V edit, a movie scene and every other family
+  // drop it with a STYLE_VIDEO_UNSUPPORTED warning, never a refusal. The reference's `audio_window` picks the part
+  // of the clip (see `AudioWindow`): 2,334-5,167 ms each, 9,000 ms for all of a request's style and effect videos
+  // together; absent = the first 3,000 ms. It shares MiniMax H3's three video references with START_VIDEO,
+  // SOURCE_VIDEO and EFFECT_VIDEO. Its soundtrack is never used.
+  STYLE_VIDEO = 43;
+  // Video: an EFFECT reference for a new generation. The effect seen in this clip - lightning, neon light, glow,
+  // sparks - plays across the render on the clip's own timing; its people, objects, setting, framing, text, logos
+  // and sound do not transfer. Every other rule is STYLE_VIDEO's.
+  EFFECT_VIDEO = 44;
+  // Audio: the output's soundtrack IS this audio, held exactly, and the picture follows it (lip sync, rhythm). The
+  // delivered audio is the original decoded waveform, never a model's re-synthesis. MiniMax H3 holds it on every
+  // chunk; the LTX-2 families take it as their driving audio, WAN S2V as its driving speech. The reference's
+  // `audio_window` picks the part of the file (see `AudioWindow`). Your own DRIVING_AUDIO is never dropped.
+  DRIVING_AUDIO = 50;
+  // Audio: a speaker-identity voice sample (about 5 s recommended). The model generates the speech itself in this
+  // voice: LTX 2.3 (in-context; it speaks in one voice, so a second voice is dropped with a warning) and MiniMax H3
+  // (bound to its subject by the reference's `subject_binding` - the timbre, never the timing). Beside a
+  // DRIVING_AUDIO the voice is dropped with a VOICE_REFERENCE_DROPPED warning (your own audio wins), and a family
+  // that takes no voice drops it with a warning too.
+  VOICE_REFERENCE = 51;
+  // Audio: a sound or timbre reference that is NOT a cast member's voice - an instrument, a texture, a style. The
+  // generated soundtrack takes its character, never its timing (MiniMax H3, unbound). A family without an
+  // audio-reference lane drops it with an AUDIO_REFERENCE_DROPPED warning.
+  AUDIO_REFERENCE = 52;
+}
+
+// A span of a media file, [start_ms, end_ms): milliseconds from the decoded file's first sample (audio) or from the
+// clip's first frame (video), end exclusive - a media reference's `audio_window`.
+// DRIVING_AUDIO: the held span. Absent = the whole file from its start. A window that runs past the file's end is
+// clamped to it (an AUDIO_WINDOW_CLAMPED warning); one with end_ms <= start_ms or start_ms < 0 holds the whole
+// file (an AUDIO_WINDOW_INVALID warning) - never a refusal. Output frame f of the render holds the window's audio
+// at start_ms + f * 1000 / fps; past the window's (clamped) end the held audio is silence.
+// STYLE_VIDEO / EFFECT_VIDEO: the part of the clip the reference shows - 2,334-5,167 ms each, 9,000 ms together;
+// absent = the first 3,000 ms. A window outside these bounds is trimmed to them (a STYLE_VIDEO_WINDOW_ADJUSTED
+// warning) - never a refusal.
+// Ignored on any other role.
+message AudioWindow {
+  int64 start_ms = 1;
+  int64 end_ms = 2;
+}
