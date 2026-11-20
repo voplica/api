@@ -37,8 +37,7 @@ message DatasetGenerationParams {
   // The skin-texture refine pass after each generated image. DEFAULT IS TRUE, which is not the proto3 bool default:
   // absent means true, and only an explicit false disables it - read it with a presence check.
   optional bool refine = 3;
-  // Explicit edit-model variant id. Absent = the default edit model family (QWEN_IMAGE_EDIT_2511). An explicit
-  // variant wins.
+  // Explicit edit-model variant id. Absent = the platform's default edit model. An explicit variant wins.
   optional string edit_model_variant_id = 4;
   // Coverage toggles. When true, the deterministic shot matrix additionally varies the axis;
   // when false the axis is held at its neutral value. Both widen the matrix, so a fixed

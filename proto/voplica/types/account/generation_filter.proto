@@ -1,0 +1,25 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.account;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.account";
+option go_package = "voplica.com/types/account";
+option csharp_namespace = "Voplica.Types.Account";
+
+// An account's generation filter: whether a prompt that the content-policy check reads as explicit is rejected for the
+// account's generation runs.
+enum GenerationFilter {
+  // Not set. Reads as DEFAULT.
+  GENERATION_FILTER_UNSPECIFIED = 0;
+  // The platform default applies.
+  GENERATION_FILTER_DEFAULT = 1;
+  // Prompts read as explicit are rejected.
+  GENERATION_FILTER_ENABLED = 2;
+  // The filter is not applied.
+  GENERATION_FILTER_DISABLED = 3;
+}

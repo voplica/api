@@ -43,4 +43,7 @@ enum ModelFileRole {
   // json/yaml. Never imported - kept so a refusal can be honest about what the file was.
   ROLE_CONFIG = 9;
   ROLE_OTHER = 10;
+  // A tokenizer.json that adds tokens to the model family's own tokenizer. Not accepted today: no model family accepts
+  // one (ModelFamilyExtension.additive_tokenizer is false on every family).
+  ROLE_TOKENIZER = 11;
 }

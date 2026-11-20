@@ -11,6 +11,7 @@ option java_package = "com.voplica.types.account";
 option go_package = "voplica.com/types/account";
 option csharp_namespace = "Voplica.Types.Account";
 import "voplica/types/base/mpa_rating.proto";
+import "voplica/types/account/generation_filter.proto";
 
 // A profile picture the platform's analysis flagged as a policy violation is hidden from non-owners until an admin
 // reviews it. The state is per picture and bound to the asset id it is about, so replacing the picture drops the
@@ -71,6 +72,10 @@ message VoplicaAccount {
   optional ProfilePictureRestriction avatar_restriction = 7;
   optional ProfilePictureRestriction banner_restriction = 8;
   optional voplica.types.base.MPARating max_public_mpa_rating = 9;
+  // The account's generation filter as stored. Present only on the account's own read and an administrator's; never
+  // UNSPECIFIED there - an account that never set it reads DEFAULT. Absent on every other read, and from a server
+  // older than this field.
+  optional voplica.types.account.GenerationFilter generation_filter = 10;
 }
 
 message VoplicaAccountMetadata {

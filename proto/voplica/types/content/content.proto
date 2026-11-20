@@ -72,6 +72,7 @@ message Content {
   bool publication_refused = 16;
   bool uploaded_song_lineage = 17;
   reserved 18;
+  bool external_music_flagged = 19;
   // Engagement metrics (read-only, updated by the platform). Renamed from views_count/checks_count -- see the
   // checks->views/views->engagement terminology rename.
   uint64 likes_count = 20;
@@ -99,6 +100,7 @@ message ContentMetadata {
   // Owner/admin visibility only.
   voplica.types.base.JobStatus mpa_check_job_status = 6;
   reserved 7;
+  reserved 8;
 }
 
 // Provenance data describing how a piece of content was generated.

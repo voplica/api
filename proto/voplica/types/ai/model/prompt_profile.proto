@@ -1,0 +1,33 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.model;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.model";
+option go_package = "voplica.com/types/ai/model";
+option csharp_namespace = "Voplica.Types.Ai.Model";
+
+// One prompt-writing profile a model family offers: instructions the platform publishes after its own review, which the
+// prompt assistant follows when it writes or improves prompts for a model variant that selected the profile
+// (ModelVariant.prompt_profile for its requests other than NSFW ones, ModelVariant.nsfw_prompt_profile for its NSFW
+// requests).
+message PromptProfile {
+  // What ModelVariant.prompt_profile and ModelVariant.nsfw_prompt_profile store: 1 to 40 characters, lowercase
+  // letters, digits and hyphens. The family's default profile is "default". A retired key is never given to another
+  // profile.
+  string key = 1;
+  // A short name to show.
+  string display_name = 2;
+  // One or two sentences on how the profile writes prompts.
+  string description = 3;
+  // True for the family's default profile, the one a variant with no profile uses; selecting it is the same as
+  // selecting none.
+  bool family_default = 4;
+  // True when the profile has its own instructions for NSFW requests, and the platform currently uses them. A profile
+  // without them writes such prompts with its general instructions only; it never takes another profile's.
+  bool has_nsfw_instructions = 5;
+}

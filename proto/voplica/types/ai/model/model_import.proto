@@ -22,6 +22,9 @@ import "voplica/types/ai/common/model_file_structure.proto";
 import "voplica/types/ai/common/d_type.proto";
 import "voplica/types/ai/common/quantization_type.proto";
 import "voplica/types/ai/common/model_file_role.proto";
+import "voplica/types/ai/common/inference_strategy.proto";
+import "voplica/types/ai/common/lora_usage_strategy.proto";
+import "voplica/types/ai/model/model.proto";
 import "voplica/types/subscription/studio_subscription_type.proto";
 
 // What an import job creates.
@@ -208,6 +211,19 @@ message ImportVersionSelection {
   // Donor variant for transformer-only weights (text encoders / VAE come from it); optional, same
   // semantics as CreateModelVariantRequest.based_on_model_variant_id.
   optional string based_on_model_variant_id = 5;
+  // As CreateModelVariantRequest.sampling_regime, for the variant this selection creates.
+  optional ModelVariantSamplingRegime sampling_regime = 6;
+  // As CreateModelVariantRequest.inference_strategy, checked against the family the variant gets: model_family above
+  // when set, else the version's mapped family. A refused value refuses the whole import before anything is created.
+  optional voplica.types.ai.common.InferenceStrategy inference_strategy = 7;
+  // As CreateModelVariantRequest.prompt_profile (the profile for the variant's requests other than NSFW ones), checked
+  // like inference_strategy above.
+  optional string prompt_profile = 8;
+  // As CreateModelVariantRequest.lora_usage_strategy, checked like inference_strategy above.
+  optional voplica.types.ai.common.LoraUsageStrategy lora_usage_strategy = 9;
+  // As CreateModelVariantRequest.nsfw_prompt_profile (the profile for the variant's NSFW requests), checked like
+  // inference_strategy above.
+  optional string nsfw_prompt_profile = 10;
 }
 
 // The CreateModelRequest fields the user must still supply (everything else comes from the provider).

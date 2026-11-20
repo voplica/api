@@ -42,6 +42,10 @@ message GetMyCreatorProgramResponse {
   uint32 terms_version = 2;
   // The pending raise request, when there is one.
   optional voplica.types.creator.CreatorAllowanceRequest pending_allowance_request = 3;
+  // The caller's linked provider profiles, whether or not an application exists: a link is a fact
+  // about the account, and linking a profile creates no application. When there is an application,
+  // `application.links` carries the same list.
+  repeated voplica.types.creator.CreatorProviderLink links = 4;
 }
 
 message ListMyProfileModelsRequest {

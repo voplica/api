@@ -13,6 +13,8 @@ option csharp_namespace = "Voplica.Types.Ai.Model";
 import "voplica/types/ai/common/subject_category.proto";
 import "voplica/types/ai/common/model_type.proto";
 import "voplica/types/ai/common/model_family_type.proto";
+import "voplica/types/ai/common/inference_strategy.proto";
+import "voplica/types/ai/common/lora_usage_strategy.proto";
 import "voplica/types/ai/common/controlnet_type.proto";
 import "voplica/types/base/visibility.proto";
 import "voplica/types/base/publish_status.proto";
@@ -166,6 +168,32 @@ message ModelVariant {
   // state here ("the family decides"), not the absence of one, and it is what every variant that predates
   // this field reads as.
   ModelVariantSamplingRegime sampling_regime = 15;
+  // How the platform runs this variant (InferenceStrategy), set by its owner or an administrator to a strategy its model
+  // family lists in ModelFamilyExtension.inference_strategies. INFERENCE_STRATEGY_UNSPECIFIED - what a variant reads
+  // unless its owner chose otherwise - means the family's default, which for a model a creator uploaded or imported may
+  // be another strategy than for the platform's own models of the family. Independent of sampling_regime: that one says
+  // what the weights are, this one how a run uses them.
+  voplica.types.ai.common.InferenceStrategy inference_strategy = 26;
+  // The prompt-writing profile the prompt assistant follows for this variant's requests other than NSFW ones (those
+  // follow nsfw_prompt_profile): the key of a profile its model family offers (ModelVariantService.ListPromptProfiles).
+  // Empty means the family's default profile for these requests. The platform publishes profiles after its own review;
+  // a variant selects one and never carries prompt text of its own. A retired key is never given to another profile,
+  // and a variant that still holds one uses the family's default profile.
+  string prompt_profile = 27;
+  // How the platform applies LoRAs on this variant (LoraUsageStrategy), set by its owner or an administrator to a
+  // strategy its model family lists in ModelFamilyExtension.lora_usage_strategies. It is a checkpoint's setting and
+  // covers every LoRA a generation uses with this checkpoint, whoever owns the LoRA; a LoRA variant has none.
+  // LORA_USAGE_STRATEGY_UNSPECIFIED - what a variant reads unless its owner chose otherwise - means the family's
+  // default, which for a model a creator uploaded or imported may be another strategy than for the platform's own
+  // models of the family. Independent of inference_strategy: that one says how a run is shaped, this one how the run
+  // uses LoRAs.
+  voplica.types.ai.common.LoraUsageStrategy lora_usage_strategy = 28;
+  // The prompt-writing profile the prompt assistant follows for this variant's NSFW requests - the requests the
+  // platform treats as not safe for work, such as those its content check reads as suggestive or explicit: the key of a
+  // profile its model family offers (ModelVariantService.ListPromptProfiles). Empty means the family's default profile
+  // for NSFW requests, whatever prompt_profile holds: the two are chosen independently. Profiles are published,
+  // selected and retired as prompt_profile describes.
+  string nsfw_prompt_profile = 29;
   optional string creator_id = 23;
   reserved 16 to 22;
   uint64 likes_count = 31;

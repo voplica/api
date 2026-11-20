@@ -12,6 +12,7 @@ option go_package = "voplica.com/api/account";
 option csharp_namespace = "Voplica.Api.Account";
 import "voplica/auth.proto";
 import "voplica/types/account/account.proto";
+import "voplica/types/account/generation_filter.proto";
 
 message GetAccountRequest {
   oneof filter {
@@ -33,6 +34,18 @@ message GetAccountMetadataResponse {
   voplica.types.account.VoplicaAccountMetadata account_metadata = 1;
 }
 
+message SetOwnGenerationFilterRequest {
+  // DEFAULT, ENABLED or DISABLED. UNSPECIFIED or an unknown value is refused.
+  voplica.types.account.GenerationFilter generation_filter = 1;
+}
+
+message SetOwnGenerationFilterResponse {
+  // The account's generation filter as stored now.
+  voplica.types.account.GenerationFilter generation_filter = 1;
+  // false = the account already had this value: nothing was written.
+  bool changed = 2;
+}
+
 service AccountService {
   // find account
   rpc GetAccount (GetAccountRequest) returns (GetAccountResponse) {
@@ -45,6 +58,14 @@ service AccountService {
   rpc GetAccountMetadata (GetAccountMetadataRequest) returns (GetAccountMetadataResponse) {
     option (auth) = {
       auth_type: NOT_REQUIRED,
+      pat_allowed: true
+    };
+  }
+  // Sets the caller's own account's generation filter: DEFAULT, ENABLED or DISABLED; UNSPECIFIED or an unknown value is
+  // refused (INVALID_ARGUMENT). The new value applies to runs started after the call.
+  rpc SetOwnGenerationFilter (SetOwnGenerationFilterRequest) returns (SetOwnGenerationFilterResponse) {
+    option (auth) = {
+      auth_type: ANY_USER,
       pat_allowed: true
     };
   }

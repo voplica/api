@@ -26,6 +26,7 @@ enum ModelWeightsKind {
   VAE_WEIGHTS = 5;
   UNKNOWN_WEIGHTS = 6;
   TEXT_ENCODER_WEIGHTS = 7; // a standalone CLIP / T5 / Qwen3 / Llama text encoder
+  TOKENIZER_FILE = 8; // a tokenizer.json (ModelFileRole.ROLE_TOKENIZER), not weights
 }
 
 enum ModelFilesVerificationMethod {

@@ -13,6 +13,8 @@ option csharp_namespace = "Voplica.Types.Ai.Common";
 import "voplica/types/base/file_type.proto";
 import "voplica/types/ai/common/generation_mode.proto";
 import "voplica/types/ai/common/inference_mode.proto";
+import "voplica/types/ai/common/inference_strategy.proto";
+import "voplica/types/ai/common/lora_usage_strategy.proto";
 import "google/protobuf/descriptor.proto";
 extend google.protobuf.EnumValueOptions {
   optional ModelFamilyExtension model_family_extension = 50141;
@@ -38,6 +40,15 @@ message ModelFamilyExtension {
   bool gguf_single_file = 12;
   bool video_part_refine = 13;
   repeated InferenceMode inference_modes = 14;
+  // The inference strategies a variant of this family may choose (ModelVariant.inference_strategy), besides
+  // INFERENCE_STRATEGY_UNSPECIFIED, which every family accepts. Empty: the family runs one way only.
+  repeated InferenceStrategy inference_strategies = 15;
+  // True when a checkpoint variant of this family accepts a tokenizer.json that adds tokens to the family's tokenizer
+  // (ModelFileRole.ROLE_TOKENIZER). False on every family today: no variant accepts such a file.
+  bool additive_tokenizer = 16;
+  // The LoRA usage strategies a checkpoint variant of this family may choose (ModelVariant.lora_usage_strategy),
+  // besides LORA_USAGE_STRATEGY_UNSPECIFIED, which every family accepts. Empty: the family applies LoRAs one way only.
+  repeated LoraUsageStrategy lora_usage_strategies = 17;
 }
 
 enum ModelFamily {
@@ -67,7 +78,7 @@ enum ModelFamily {
   // MiniMax H3: video family with reference conditioning. The FIRST family to declare
   // V2V — its references channel takes whole videos (frames + fps + their own soundtrack)
   // as semantic conditioning rather than as a restyle source with bound geometry.
-  MINIMAX_H3 = 14 [(model_family_extension) = { label: "MiniMax H3", possible_outputs: [VIDEO_FILE], lora_compatibility: [MINIMAX_H3], generation_modes: [T2V, I2V, V2V], component_slots: ["transformer", "transformer_ref", "text_encoder", "vae", "audio_vae"], gguf_single_file: True, video_part_refine: True, inference_modes: [FAST, BALANCED, ORIGINAL] }];
+  MINIMAX_H3 = 14 [(model_family_extension) = { label: "MiniMax H3", possible_outputs: [VIDEO_FILE], lora_compatibility: [MINIMAX_H3], generation_modes: [T2V, I2V, V2V], component_slots: ["transformer", "transformer_ref", "text_encoder", "vae", "audio_vae"], gguf_single_file: True, video_part_refine: True, inference_modes: [FAST, BALANCED, ORIGINAL], inference_strategies: [INFERENCE_STRATEGY_SINGLE_PASS, INFERENCE_STRATEGY_TWO_PASS], additive_tokenizer: False, lora_usage_strategies: [LORA_USAGE_STRATEGY_AS_TRAINED, LORA_USAGE_STRATEGY_MLP_ONLY, LORA_USAGE_STRATEGY_MLP_ONLY_LOW_RANK] }];
   // MiniMax Music 3: the platform's FIRST `possible_outputs: [AUDIO_FILE]` family, and the
   // only consumer of the new T2A mode — a prompt (plus optional lyrics) renders a music
   // track. No LoRA compatibility is declared: nothing trains adapters for this family today,
@@ -89,4 +100,10 @@ enum ModelFamily {
   // 1K, 2K and 4K images only: there is no 0.5K (512 px) tier, so 1K is the smallest size it offers and a smaller
   // request is served at 1K.
   NANO_BANANA_2_1 = 26 [(model_family_extension) = { label: "Nano Banana 2.1", possible_outputs: [IMAGE_FILE], generation_modes: [T2I, I2I_EDIT], reference_images: True, hosted: False, third_party: True }];
+  // MiniMax-H3-Image: MiniMax's image model built on MiniMax-H3 - text-to-image, and generation or editing conditioned on
+  // up to 16 reference images, which the prompt names in order as <Picture 1>, <Picture 2> and so on. It generates at
+  // about 4 megapixels or more (up to about 16 megapixels, such as 4096x4096), with sides that are multiples of 32, in
+  // 6 sampling steps, with no guidance and no negative prompt. A request for a smaller picture is generated at about
+  // 4 megapixels and delivered at the size asked for.
+  MINIMAX_H3_IMAGE = 27 [(model_family_extension) = { label: "MINIMAX_H3_IMAGE", possible_outputs: [IMAGE_FILE], controlnet: False, differential_diffusion: False, generation_modes: [T2I, I2I_INPAINT, I2I_EDIT], reference_images: True, reference_images_on_inpaint: True, component_slots: ["transformer", "vae", "text_encoder"], inference_modes: [BALANCED] }];
 }

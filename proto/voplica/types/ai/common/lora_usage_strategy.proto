@@ -1,0 +1,36 @@
+// Copyright Voplica LLC
+// SPDX-License-Identifier: Apache-2.0
+//
+// The Voplica API - https://docs.voplica.com/api/
+// Generated from the Voplica platform's definitions; do not edit by hand.
+
+syntax = "proto3";
+package voplica.types.ai.common;
+option java_multiple_files = true;
+option java_package = "com.voplica.types.ai.common";
+option go_package = "voplica.com/types/ai/common";
+option csharp_namespace = "Voplica.Types.Ai.Common";
+
+// How the platform applies LoRAs on a model variant: which of a LoRA's layers a run uses, and in what form. It is a
+// checkpoint variant's setting and covers every LoRA a generation uses with that checkpoint, whoever owns the LoRA. It
+// is independent of how the checkpoint is run (InferenceStrategy) and of what its weights are
+// (ModelVariantSamplingRegime). A LoRA's files are never changed: a strategy acts when a run loads them. The numbers of
+// each strategy - which layers count as feed-forward, how far a layer's rank is reduced - are the platform's, per model
+// family, and cannot be set per variant. A variant may choose only a strategy its model family lists in
+// ModelFamilyExtension.lora_usage_strategies. Some runs, and LoRA files a strategy cannot read, apply a LoRA as trained
+// instead; a video run's output reports the recipe it used. A run is charged like any other, by the GPU time it uses.
+// Values may be added; a reader that does not know a value treats it as LORA_USAGE_STRATEGY_UNSPECIFIED. Compare values
+// by name.
+enum LoraUsageStrategy {
+  // The model family's default. LoRAs are applied as trained unless the platform set another default for the family,
+  // which it may do separately for its own models and for the models creators upload or import.
+  LORA_USAGE_STRATEGY_UNSPECIFIED = 0;
+  // Every layer of a LoRA is applied as its files have it.
+  LORA_USAGE_STRATEGY_AS_TRAINED = 1;
+  // Only a LoRA's feed-forward (MLP) layers are applied; its attention layers and every other layer are left out. A
+  // LoRA that has no feed-forward layers takes no part in the run, and the run's warnings say so.
+  LORA_USAGE_STRATEGY_MLP_ONLY = 2;
+  // As LORA_USAGE_STRATEGY_MLP_ONLY, and each layer that is kept is reduced to the lowest rank that keeps nearly all of
+  // its effect.
+  LORA_USAGE_STRATEGY_MLP_ONLY_LOW_RANK = 3;
+}

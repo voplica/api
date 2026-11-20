@@ -19,6 +19,9 @@ import "voplica/types/base/publish_status.proto";
 import "voplica/types/subscription/studio_subscription_type.proto";
 import "voplica/types/file/files.proto";
 import "voplica/types/base/file_type.proto";
+import "voplica/types/ai/common/inference_strategy.proto";
+import "voplica/types/ai/common/lora_usage_strategy.proto";
+import "voplica/types/ai/model/prompt_profile.proto";
 
 message CreateModelVariantRequest {
   string parent_model_id = 1;
@@ -42,6 +45,27 @@ message CreateModelVariantRequest {
   // If `true` anyone who can use the model will also be able to train on it: fine-tune these weights further, or train
   // a LoRA on them. If `false` only the owner may. Absent ⇒ `true` (see `ModelVariant.training_allowed`).
   optional bool training_allowed = 9;
+  // What the weights are (ModelVariantSamplingRegime). Absent or SAMPLING_REGIME_UNSPECIFIED: the family decides. A
+  // value this service does not know is INVALID_ARGUMENT.
+  optional voplica.types.ai.model.ModelVariantSamplingRegime sampling_regime = 10;
+  // How the platform runs the variant (ModelVariant.inference_strategy). Absent or INFERENCE_STRATEGY_UNSPECIFIED: the
+  // family's default, as ModelVariant.inference_strategy describes it. Any other value must be listed in model_family's
+  // ModelFamilyExtension.inference_strategies, and the model must be a checkpoint; otherwise INVALID_ARGUMENT.
+  optional voplica.types.ai.common.InferenceStrategy inference_strategy = 11;
+  // The prompt-writing profile for the variant's requests other than NSFW ones (ModelVariant.prompt_profile). Absent,
+  // empty or "default": the family's default. Any other value must be a key ListPromptProfiles offers the variant's
+  // owner for model_family, and the model must be a checkpoint; otherwise INVALID_ARGUMENT.
+  optional string prompt_profile = 12;
+  // How the platform applies LoRAs on the variant (ModelVariant.lora_usage_strategy). Absent or
+  // LORA_USAGE_STRATEGY_UNSPECIFIED: the family's default, as ModelVariant.lora_usage_strategy describes it. Any other
+  // value must be listed in model_family's ModelFamilyExtension.lora_usage_strategies, and the model must be a
+  // checkpoint; otherwise INVALID_ARGUMENT.
+  optional voplica.types.ai.common.LoraUsageStrategy lora_usage_strategy = 13;
+  // The prompt-writing profile for the variant's NSFW requests (ModelVariant.nsfw_prompt_profile). Absent, empty or
+  // "default": the family's default for NSFW requests, whatever prompt_profile says. Any other value must be a key
+  // ListPromptProfiles offers the variant's owner for model_family, and the model must be a checkpoint; otherwise
+  // INVALID_ARGUMENT.
+  optional string nsfw_prompt_profile = 14;
 }
 
 message CreateModelVariantResponse {
@@ -141,11 +165,36 @@ message UpdateModelVariantRequest {
   bool clear_trigger_words = 10;
   // The manual raw / step-distilled declaration (see `ModelVariantSamplingRegime`). Absent leaves it as it is,
   // `SAMPLING_REGIME_UNSPECIFIED` clears it and lets the model family decide, and either concrete value sets it.
+  // A value this service does not know is INVALID_ARGUMENT, never stored as a clear.
   optional voplica.types.ai.model.ModelVariantSamplingRegime sampling_regime = 11;
   optional string declared_external_ref = 12;
   // Sets `ModelVariant.training_allowed`; absent = unchanged. Writable by the variant's owner or an administrator, as
   // every other field of this request.
   optional bool training_allowed = 14;
+  // Sets ModelVariant.inference_strategy. Absent leaves it unchanged; INFERENCE_STRATEGY_UNSPECIFIED clears it (the
+  // family's default, as ModelVariant.inference_strategy describes it); any other value must be listed in the family's
+  // ModelFamilyExtension.inference_strategies (the family this request sets, when it sets one) and the model must be a
+  // checkpoint, or the request is INVALID_ARGUMENT. A request that changes model_family is refused the same way while
+  // the stored strategy does not suit the new family: send INFERENCE_STRATEGY_UNSPECIFIED with it.
+  optional voplica.types.ai.common.InferenceStrategy inference_strategy = 15;
+  // Sets ModelVariant.prompt_profile, the profile for the variant's requests other than NSFW ones. Absent leaves it
+  // unchanged; empty or "default" clears it (the family's default); any other value must be a key ListPromptProfiles
+  // offers the variant's owner for the family (the one this request sets, when it sets one) and the model must be a
+  // checkpoint, or the request is INVALID_ARGUMENT. A request that changes model_family is refused while the stored
+  // profile is not one the new family offers: send an empty prompt_profile with it.
+  optional string prompt_profile = 16;
+  // Sets ModelVariant.lora_usage_strategy. Absent leaves it unchanged; LORA_USAGE_STRATEGY_UNSPECIFIED clears it (the
+  // family's default, as ModelVariant.lora_usage_strategy describes it); any other value must be listed in the family's
+  // ModelFamilyExtension.lora_usage_strategies (the family this request sets, when it sets one) and the model must be a
+  // checkpoint, or the request is INVALID_ARGUMENT. A request that changes model_family is refused the same way while
+  // the stored strategy does not suit the new family: send LORA_USAGE_STRATEGY_UNSPECIFIED with it.
+  optional voplica.types.ai.common.LoraUsageStrategy lora_usage_strategy = 17;
+  // Sets ModelVariant.nsfw_prompt_profile, the profile for the variant's NSFW requests. Absent leaves it unchanged;
+  // empty or "default" clears it (the family's default for NSFW requests); any other value must be a key
+  // ListPromptProfiles offers the variant's owner for the family (the one this request sets, when it sets one) and the
+  // model must be a checkpoint, or the request is INVALID_ARGUMENT. A request that changes model_family is refused
+  // while the stored profile is not one the new family offers: send an empty nsfw_prompt_profile with it.
+  optional string nsfw_prompt_profile = 18;
 }
 
 message UpdateModelVariantResponse {
@@ -236,6 +285,19 @@ message GetModelVariantRuntimeStatesResponse {
   // One entry per REQUESTED id, in request order, including the ids nothing is known about
   // (state UNSPECIFIED) - so a client can index by position without a second lookup.
   repeated ModelVariantRuntimeStateEntry entries = 1;
+}
+
+message ListPromptProfilesRequest {
+  // The family whose profiles to list. MODEL_FAMILY_UNSPECIFIED, or a family this service does not know, is
+  // INVALID_ARGUMENT.
+  voplica.types.ai.common.ModelFamily model_family = 1;
+}
+
+message ListPromptProfilesResponse {
+  // The profiles the caller may select for a variant of the family: its default profile first, then the others; empty
+  // when the family offers no profile besides its default. A profile made for particular owners is listed only to
+  // them and to administrators.
+  repeated voplica.types.ai.model.PromptProfile profiles = 1;
 }
 
 service ModelVariantService {
@@ -336,6 +398,14 @@ service ModelVariantService {
   rpc GetModelVariantRuntimeStates (GetModelVariantRuntimeStatesRequest) returns (GetModelVariantRuntimeStatesResponse) {
     option (auth) = {
       auth_type: ANY_USER,
+      pat_allowed: true
+    };
+  }
+  // The prompt-writing profiles a model family offers, for ModelVariant.prompt_profile and
+  // ModelVariant.nsfw_prompt_profile. FAILED_PRECONDITION while the platform cannot read its list of profiles.
+  rpc ListPromptProfiles (ListPromptProfilesRequest) returns (ListPromptProfilesResponse) {
+    option (auth) = {
+      auth_type: NOT_REQUIRED,
       pat_allowed: true
     };
   }

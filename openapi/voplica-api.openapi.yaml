@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Voplica API
-  version: "1.5.0"
+  version: "1.13.0"
   description: |-
     Every unary RPC an API key may call, as plain JSON: POST the request message in its standard protobuf JSON form
     to /<package.Service>/<Method> with `Content-Type: application/json`; the response comes back the same way.
@@ -644,6 +644,30 @@ components:
             - $ref: '#/components/schemas/voplica.types.account.VoplicaAccount'
           title: account
       title: GetAccountResponse
+      additionalProperties: false
+    voplica.api.account.SetOwnGenerationFilterRequest:
+      type: object
+      properties:
+        generationFilter:
+          allOf:
+            - $ref: '#/components/schemas/voplica.types.account.GenerationFilter'
+          title: generation_filter
+          description: DEFAULT, ENABLED or DISABLED. UNSPECIFIED or an unknown value is refused.
+      title: SetOwnGenerationFilterRequest
+      additionalProperties: false
+    voplica.api.account.SetOwnGenerationFilterResponse:
+      type: object
+      properties:
+        generationFilter:
+          allOf:
+            - $ref: '#/components/schemas/voplica.types.account.GenerationFilter'
+          title: generation_filter
+          description: The account's generation filter as stored now.
+        changed:
+          type: boolean
+          title: changed
+          description: 'false = the account already had this value: nothing was written.'
+      title: SetOwnGenerationFilterResponse
       additionalProperties: false
     voplica.api.ai.dataset.AddDatasetPreviewAssetRequest:
       type: object
@@ -3733,6 +3757,52 @@ components:
           description: |-
             If `true` anyone who can use the model will also be able to train on it: fine-tune these weights further, or train
              a LoRA on them. If `false` only the owner may. Absent ⇒ `true` (see `ModelVariant.training_allowed`).
+        samplingRegime:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.ai.model.ModelVariantSamplingRegime'
+            - type: "null"
+          title: sampling_regime
+          description: |-
+            What the weights are (ModelVariantSamplingRegime). Absent or SAMPLING_REGIME_UNSPECIFIED: the family decides. A
+             value this service does not know is INVALID_ARGUMENT.
+        inferenceStrategy:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.ai.common.InferenceStrategy'
+            - type: "null"
+          title: inference_strategy
+          description: |-
+            How the platform runs the variant (ModelVariant.inference_strategy). Absent or INFERENCE_STRATEGY_UNSPECIFIED: the
+             family's default, as ModelVariant.inference_strategy describes it. Any other value must be listed in model_family's
+             ModelFamilyExtension.inference_strategies, and the model must be a checkpoint; otherwise INVALID_ARGUMENT.
+        promptProfile:
+          type:
+            - string
+            - "null"
+          title: prompt_profile
+          description: |-
+            The prompt-writing profile for the variant's requests other than NSFW ones (ModelVariant.prompt_profile). Absent,
+             empty or "default": the family's default. Any other value must be a key ListPromptProfiles offers the variant's
+             owner for model_family, and the model must be a checkpoint; otherwise INVALID_ARGUMENT.
+        loraUsageStrategy:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.ai.common.LoraUsageStrategy'
+            - type: "null"
+          title: lora_usage_strategy
+          description: |-
+            How the platform applies LoRAs on the variant (ModelVariant.lora_usage_strategy). Absent or
+             LORA_USAGE_STRATEGY_UNSPECIFIED: the family's default, as ModelVariant.lora_usage_strategy describes it. Any other
+             value must be listed in model_family's ModelFamilyExtension.lora_usage_strategies, and the model must be a
+             checkpoint; otherwise INVALID_ARGUMENT.
+        nsfwPromptProfile:
+          type:
+            - string
+            - "null"
+          title: nsfw_prompt_profile
+          description: |-
+            The prompt-writing profile for the variant's NSFW requests (ModelVariant.nsfw_prompt_profile). Absent, empty or
+             "default": the family's default for NSFW requests, whatever prompt_profile says. Any other value must be a key
+             ListPromptProfiles offers the variant's owner for model_family, and the model must be a checkpoint; otherwise
+             INVALID_ARGUMENT.
       title: CreateModelVariantRequest
       additionalProperties: false
     voplica.api.ai.model.CreateModelVariantResponse:
@@ -4431,6 +4501,32 @@ components:
           title: asc_sort
       title: ListModelsSorting
       additionalProperties: false
+    voplica.api.ai.model.ListPromptProfilesRequest:
+      type: object
+      properties:
+        modelFamily:
+          allOf:
+            - $ref: '#/components/schemas/voplica.types.ai.common.ModelFamily'
+          title: model_family
+          description: |-
+            The family whose profiles to list. MODEL_FAMILY_UNSPECIFIED, or a family this service does not know, is
+             INVALID_ARGUMENT.
+      title: ListPromptProfilesRequest
+      additionalProperties: false
+    voplica.api.ai.model.ListPromptProfilesResponse:
+      type: object
+      properties:
+        profiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/voplica.types.ai.model.PromptProfile'
+          title: profiles
+          description: |-
+            The profiles the caller may select for a variant of the family: its default profile first, then the others; empty
+             when the family offers no profile besides its default. A profile made for particular owners is listed only to
+             them and to administrators.
+      title: ListPromptProfilesResponse
+      additionalProperties: false
     voplica.api.ai.model.ModelFieldsFetchingOptions:
       type: object
       properties:
@@ -4805,6 +4901,7 @@ components:
           description: |-
             The manual raw / step-distilled declaration (see `ModelVariantSamplingRegime`). Absent leaves it as it is,
              `SAMPLING_REGIME_UNSPECIFIED` clears it and lets the model family decide, and either concrete value sets it.
+             A value this service does not know is INVALID_ARGUMENT, never stored as a clear.
         declaredExternalRef:
           type:
             - string
@@ -4818,6 +4915,50 @@ components:
           description: |-
             Sets `ModelVariant.training_allowed`; absent = unchanged. Writable by the variant's owner or an administrator, as
              every other field of this request.
+        inferenceStrategy:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.ai.common.InferenceStrategy'
+            - type: "null"
+          title: inference_strategy
+          description: |-
+            Sets ModelVariant.inference_strategy. Absent leaves it unchanged; INFERENCE_STRATEGY_UNSPECIFIED clears it (the
+             family's default, as ModelVariant.inference_strategy describes it); any other value must be listed in the family's
+             ModelFamilyExtension.inference_strategies (the family this request sets, when it sets one) and the model must be a
+             checkpoint, or the request is INVALID_ARGUMENT. A request that changes model_family is refused the same way while
+             the stored strategy does not suit the new family: send INFERENCE_STRATEGY_UNSPECIFIED with it.
+        promptProfile:
+          type:
+            - string
+            - "null"
+          title: prompt_profile
+          description: |-
+            Sets ModelVariant.prompt_profile, the profile for the variant's requests other than NSFW ones. Absent leaves it
+             unchanged; empty or "default" clears it (the family's default); any other value must be a key ListPromptProfiles
+             offers the variant's owner for the family (the one this request sets, when it sets one) and the model must be a
+             checkpoint, or the request is INVALID_ARGUMENT. A request that changes model_family is refused while the stored
+             profile is not one the new family offers: send an empty prompt_profile with it.
+        loraUsageStrategy:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.ai.common.LoraUsageStrategy'
+            - type: "null"
+          title: lora_usage_strategy
+          description: |-
+            Sets ModelVariant.lora_usage_strategy. Absent leaves it unchanged; LORA_USAGE_STRATEGY_UNSPECIFIED clears it (the
+             family's default, as ModelVariant.lora_usage_strategy describes it); any other value must be listed in the family's
+             ModelFamilyExtension.lora_usage_strategies (the family this request sets, when it sets one) and the model must be a
+             checkpoint, or the request is INVALID_ARGUMENT. A request that changes model_family is refused the same way while
+             the stored strategy does not suit the new family: send LORA_USAGE_STRATEGY_UNSPECIFIED with it.
+        nsfwPromptProfile:
+          type:
+            - string
+            - "null"
+          title: nsfw_prompt_profile
+          description: |-
+            Sets ModelVariant.nsfw_prompt_profile, the profile for the variant's NSFW requests. Absent leaves it unchanged;
+             empty or "default" clears it (the family's default for NSFW requests); any other value must be a key
+             ListPromptProfiles offers the variant's owner for the family (the one this request sets, when it sets one) and the
+             model must be a checkpoint, or the request is INVALID_ARGUMENT. A request that changes model_family is refused
+             while the stored profile is not one the new family offers: send an empty nsfw_prompt_profile with it.
       title: UpdateModelVariantRequest
       additionalProperties: false
     voplica.api.ai.model.UpdateModelVariantResponse:
@@ -7876,6 +8017,15 @@ components:
             - type: "null"
           title: pending_allowance_request
           description: The pending raise request, when there is one.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/voplica.types.creator.CreatorProviderLink'
+          title: links
+          description: |-
+            The caller's linked provider profiles, whether or not an application exists: a link is a fact
+             about the account, and linking a profile creates no application. When there is an application,
+             `application.links` carries the same list.
       title: GetMyCreatorProgramResponse
       additionalProperties: false
     voplica.api.creator.ListMyProfileModelsRequest:
@@ -10189,6 +10339,17 @@ components:
         Note: Enum values are prefixed (e.g., WORKFLOW_VARIANT_CREATED_AT instead of CREATED_AT) to avoid
          conflicts with other sort keys in the same package. Protobuf uses C++ scoping rules where enum
          values exist in the scope enclosing the enum.
+    voplica.types.account.GenerationFilter:
+      type: string
+      title: GenerationFilter
+      enum:
+        - GENERATION_FILTER_UNSPECIFIED
+        - GENERATION_FILTER_DEFAULT
+        - GENERATION_FILTER_ENABLED
+        - GENERATION_FILTER_DISABLED
+      description: |-
+        An account's generation filter: whether a prompt that the content-policy check reads as explicit is rejected for the
+         account's generation runs.
     voplica.types.account.ProfilePictureRestriction:
       type: object
       properties:
@@ -10291,6 +10452,15 @@ components:
             - $ref: '#/components/schemas/voplica.types.base.MPARating'
             - type: "null"
           title: max_public_mpa_rating
+        generationFilter:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.account.GenerationFilter'
+            - type: "null"
+          title: generation_filter
+          description: |-
+            The account's generation filter as stored. Present only on the account's own read and an administrator's; never
+             UNSPECIFIED there - an account that never set it reads DEFAULT. Absent on every other read, and from a server
+             older than this field.
       title: VoplicaAccount
       additionalProperties: false
     voplica.types.account.VoplicaAccountMetadata:
@@ -10362,6 +10532,40 @@ components:
         - INT32
         - BOOL
         - FLOAT8
+    voplica.types.ai.common.InferenceStrategy:
+      type: string
+      title: InferenceStrategy
+      enum:
+        - INFERENCE_STRATEGY_UNSPECIFIED
+        - INFERENCE_STRATEGY_SINGLE_PASS
+        - INFERENCE_STRATEGY_TWO_PASS
+      description: |-
+        How the platform runs a model variant: the shape of one inference. It is independent of what the weights are
+         (ModelVariantSamplingRegime) and of the speed / quality trade-off a request asks for (InferenceMode). The numbers of
+         each strategy - resolutions, step counts, how much of the picture the refining pass redraws - and the inference
+         modes it applies to are the platform's, per model family, and cannot be set per variant. A variant may choose only a
+         strategy its model family lists in ModelFamilyExtension.inference_strategies. A run is charged like any other, by
+         the GPU time it uses. Values may be added; a reader that does not know a value treats it as
+         INFERENCE_STRATEGY_UNSPECIFIED. Compare values by name.
+    voplica.types.ai.common.LoraUsageStrategy:
+      type: string
+      title: LoraUsageStrategy
+      enum:
+        - LORA_USAGE_STRATEGY_UNSPECIFIED
+        - LORA_USAGE_STRATEGY_AS_TRAINED
+        - LORA_USAGE_STRATEGY_MLP_ONLY
+        - LORA_USAGE_STRATEGY_MLP_ONLY_LOW_RANK
+      description: |-
+        How the platform applies LoRAs on a model variant: which of a LoRA's layers a run uses, and in what form. It is a
+         checkpoint variant's setting and covers every LoRA a generation uses with that checkpoint, whoever owns the LoRA. It
+         is independent of how the checkpoint is run (InferenceStrategy) and of what its weights are
+         (ModelVariantSamplingRegime). A LoRA's files are never changed: a strategy acts when a run loads them. The numbers of
+         each strategy - which layers count as feed-forward, how far a layer's rank is reduced - are the platform's, per model
+         family, and cannot be set per variant. A variant may choose only a strategy its model family lists in
+         ModelFamilyExtension.lora_usage_strategies. Some runs, and LoRA files a strategy cannot read, apply a LoRA as trained
+         instead; a video run's output reports the recipe it used. A run is charged like any other, by the GPU time it uses.
+         Values may be added; a reader that does not know a value treats it as LORA_USAGE_STRATEGY_UNSPECIFIED. Compare values
+         by name.
     voplica.types.ai.common.ModelFamily:
       type: string
       title: ModelFamily
@@ -10393,6 +10597,7 @@ components:
         - FLUX_3_KLEIN
         - FLUX_3_KLEIN_BASE
         - NANO_BANANA_2_1
+        - MINIMAX_H3_IMAGE
     voplica.types.ai.common.ModelFileRole:
       type: string
       title: ModelFileRole
@@ -10408,6 +10613,7 @@ components:
         - ROLE_UPSCALER
         - ROLE_CONFIG
         - ROLE_OTHER
+        - ROLE_TOKENIZER
       description: |-
         What ONE file inside a model variant's asset IS. A variant holds exactly one primary
          (ROLE_MODEL_WEIGHTS / ROLE_DIFFUSION_WEIGHTS / ROLE_FULL_CHECKPOINT / ROLE_LORA /
@@ -10869,9 +11075,7 @@ components:
             - string
             - "null"
           title: edit_model_variant_id
-          description: |-
-            Explicit edit-model variant id. Absent = the default edit model family (QWEN_IMAGE_EDIT_2511). An explicit
-             variant wins.
+          description: Explicit edit-model variant id. Absent = the platform's default edit model. An explicit variant wins.
         coverEmotions:
           type: boolean
           title: cover_emotions
@@ -13842,6 +14046,42 @@ components:
           description: |-
             Donor variant for transformer-only weights (text encoders / VAE come from it); optional, same
              semantics as CreateModelVariantRequest.based_on_model_variant_id.
+        samplingRegime:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.ai.model.ModelVariantSamplingRegime'
+            - type: "null"
+          title: sampling_regime
+          description: As CreateModelVariantRequest.sampling_regime, for the variant this selection creates.
+        inferenceStrategy:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.ai.common.InferenceStrategy'
+            - type: "null"
+          title: inference_strategy
+          description: |-
+            As CreateModelVariantRequest.inference_strategy, checked against the family the variant gets: model_family above
+             when set, else the version's mapped family. A refused value refuses the whole import before anything is created.
+        promptProfile:
+          type:
+            - string
+            - "null"
+          title: prompt_profile
+          description: |-
+            As CreateModelVariantRequest.prompt_profile (the profile for the variant's requests other than NSFW ones), checked
+             like inference_strategy above.
+        loraUsageStrategy:
+          oneOf:
+            - $ref: '#/components/schemas/voplica.types.ai.common.LoraUsageStrategy'
+            - type: "null"
+          title: lora_usage_strategy
+          description: As CreateModelVariantRequest.lora_usage_strategy, checked like inference_strategy above.
+        nsfwPromptProfile:
+          type:
+            - string
+            - "null"
+          title: nsfw_prompt_profile
+          description: |-
+            As CreateModelVariantRequest.nsfw_prompt_profile (the profile for the variant's NSFW requests), checked like
+             inference_strategy above.
       title: ImportVersionSelection
       additionalProperties: false
     voplica.types.ai.model.LoraModelTypeMetadata:
@@ -14205,6 +14445,46 @@ components:
              loud anyway. A PLAIN enum rather than `optional` -- `SAMPLING_REGIME_UNSPECIFIED` is a real, meaningful
              state here ("the family decides"), not the absence of one, and it is what every variant that predates
              this field reads as.
+        inferenceStrategy:
+          allOf:
+            - $ref: '#/components/schemas/voplica.types.ai.common.InferenceStrategy'
+          title: inference_strategy
+          description: |-
+            How the platform runs this variant (InferenceStrategy), set by its owner or an administrator to a strategy its model
+             family lists in ModelFamilyExtension.inference_strategies. INFERENCE_STRATEGY_UNSPECIFIED - what a variant reads
+             unless its owner chose otherwise - means the family's default, which for a model a creator uploaded or imported may
+             be another strategy than for the platform's own models of the family. Independent of sampling_regime: that one says
+             what the weights are, this one how a run uses them.
+        promptProfile:
+          type: string
+          title: prompt_profile
+          description: |-
+            The prompt-writing profile the prompt assistant follows for this variant's requests other than NSFW ones (those
+             follow nsfw_prompt_profile): the key of a profile its model family offers (ModelVariantService.ListPromptProfiles).
+             Empty means the family's default profile for these requests. The platform publishes profiles after its own review;
+             a variant selects one and never carries prompt text of its own. A retired key is never given to another profile,
+             and a variant that still holds one uses the family's default profile.
+        loraUsageStrategy:
+          allOf:
+            - $ref: '#/components/schemas/voplica.types.ai.common.LoraUsageStrategy'
+          title: lora_usage_strategy
+          description: |-
+            How the platform applies LoRAs on this variant (LoraUsageStrategy), set by its owner or an administrator to a
+             strategy its model family lists in ModelFamilyExtension.lora_usage_strategies. It is a checkpoint's setting and
+             covers every LoRA a generation uses with this checkpoint, whoever owns the LoRA; a LoRA variant has none.
+             LORA_USAGE_STRATEGY_UNSPECIFIED - what a variant reads unless its owner chose otherwise - means the family's
+             default, which for a model a creator uploaded or imported may be another strategy than for the platform's own
+             models of the family. Independent of inference_strategy: that one says how a run is shaped, this one how the run
+             uses LoRAs.
+        nsfwPromptProfile:
+          type: string
+          title: nsfw_prompt_profile
+          description: |-
+            The prompt-writing profile the prompt assistant follows for this variant's NSFW requests - the requests the
+             platform treats as not safe for work, such as those its content check reads as suggestive or explicit: the key of a
+             profile its model family offers (ModelVariantService.ListPromptProfiles). Empty means the family's default profile
+             for NSFW requests, whatever prompt_profile holds: the two are chosen independently. Profiles are published,
+             selected and retired as prompt_profile describes.
         creatorId:
           type:
             - string
@@ -14292,7 +14572,45 @@ components:
         - VAE_WEIGHTS
         - UNKNOWN_WEIGHTS
         - TEXT_ENCODER_WEIGHTS
+        - TOKENIZER_FILE
       description: What the uploaded weight files ARE, as detected from the bytes.
+    voplica.types.ai.model.PromptProfile:
+      type: object
+      properties:
+        key:
+          type: string
+          title: key
+          description: |-
+            What ModelVariant.prompt_profile and ModelVariant.nsfw_prompt_profile store: 1 to 40 characters, lowercase
+             letters, digits and hyphens. The family's default profile is "default". A retired key is never given to another
+             profile.
+        displayName:
+          type: string
+          title: display_name
+          description: A short name to show.
+        description:
+          type: string
+          title: description
+          description: One or two sentences on how the profile writes prompts.
+        familyDefault:
+          type: boolean
+          title: family_default
+          description: |-
+            True for the family's default profile, the one a variant with no profile uses; selecting it is the same as
+             selecting none.
+        hasNsfwInstructions:
+          type: boolean
+          title: has_nsfw_instructions
+          description: |-
+            True when the profile has its own instructions for NSFW requests, and the platform currently uses them. A profile
+             without them writes such prompts with its general instructions only; it never takes another profile's.
+      title: PromptProfile
+      additionalProperties: false
+      description: |-
+        One prompt-writing profile a model family offers: instructions the platform publishes after its own review, which the
+         prompt assistant follows when it writes or improves prompts for a model variant that selected the profile
+         (ModelVariant.prompt_profile for its requests other than NSFW ones, ModelVariant.nsfw_prompt_profile for its NSFW
+         requests).
     voplica.types.ai.model.RevenueShareEligibility:
       type: string
       title: RevenueShareEligibility
@@ -17640,6 +17958,9 @@ components:
         uploadedSongLineage:
           type: boolean
           title: uploaded_song_lineage
+        externalMusicFlagged:
+          type: boolean
+          title: external_music_flagged
         likesCount:
           type: string
           title: likes_count
@@ -23173,6 +23494,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/voplica.api.account.GetAccountMetadataResponse'
+  /voplica.api.account.AccountService/SetOwnGenerationFilter:
+    post:
+      tags:
+        - voplica.api.account.AccountService
+      summary: SetOwnGenerationFilter
+      description: |-
+        Sets the caller's own account's generation filter: DEFAULT, ENABLED or DISABLED; UNSPECIFIED or an unknown value is
+         refused (INVALID_ARGUMENT). The new value applies to runs started after the call.
+      operationId: AccountService_SetOwnGenerationFilter
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          description: Define the version of the Connect protocol
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+          example: 1
+        - name: Connect-Timeout-Ms
+          in: header
+          description: Define the timeout, in ms
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+          example: 1000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/voplica.api.account.SetOwnGenerationFilterRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voplica.api.account.SetOwnGenerationFilterResponse'
   /voplica.api.ai.dataset.DatasetGenerationService/CancelDatasetGenerationRun:
     post:
       tags:
@@ -26569,6 +26931,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/voplica.api.ai.model.GetRecommendedControlNetModelVariantResponse'
+  /voplica.api.ai.model.ModelVariantService/ListPromptProfiles:
+    post:
+      tags:
+        - voplica.api.ai.model.ModelVariantService
+      summary: ListPromptProfiles
+      description: |-
+        The prompt-writing profiles a model family offers, for ModelVariant.prompt_profile and
+         ModelVariant.nsfw_prompt_profile. FAILED_PRECONDITION while the platform cannot read its list of profiles.
+      operationId: ModelVariantService_ListPromptProfiles
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          description: Define the version of the Connect protocol
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+          example: 1
+        - name: Connect-Timeout-Ms
+          in: header
+          description: Define the timeout, in ms
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+          example: 1000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/voplica.api.ai.model.ListPromptProfilesRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voplica.api.ai.model.ListPromptProfilesResponse'
   /voplica.api.ai.model.ModelVariantService/TriggerModelVariantVerification:
     post:
       tags:
